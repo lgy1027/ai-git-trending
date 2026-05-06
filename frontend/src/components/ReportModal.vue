@@ -186,7 +186,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import type { Report } from '../api/reports'
-import { copyReport, getRateLimitStatus } from '../api/reports'
+import { ApiRequestError, copyReport, downloadReport, getRateLimitStatus } from '../api/reports'
 import { renderMarkdown, enhanceMarkdownDisplay } from '../utils/markdown-simple'
 
 // Props
@@ -348,67 +348,19 @@ async function exportReport(format: 'md' | 'html' = 'md') {
     console.warn('获取限流状态失败，继续尝试导出')
   }
 
-  if (!props.report.content) return
-  
-  let content: string
-  let mimeType: string
-  let extension: string
-  
-  switch (format) {
-    case 'html':
-      // 使用简单的字符串拼接避免模板字符串解析问题
-      let htmlContent = ''
-      htmlContent += '<!DOCTYPE html>\n'
-      htmlContent += '<html lang="zh-CN">\n'
-      htmlContent += '<head>\n'
-      htmlContent += '  <meta charset="UTF-8">\n'
-      htmlContent += '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-      htmlContent += '  <title>GitHub 热门项目报告 - ' + props.report.date + '</title>\n'
-      htmlContent += '  <style>\n'
-      htmlContent += '    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }\n'
-      htmlContent += '    h1, h2, h3, h4, h5, h6 { color: #2c3e50; margin-top: 1.5em; margin-bottom: 0.5em; }\n'
-      htmlContent += '    p { margin: 1em 0; }\n'
-      htmlContent += '    code { background: #f4f4f4; padding: 2px 4px; border-radius: 3px; font-family: "Consolas", "Monaco", monospace; }\n'
-      htmlContent += '    pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }\n'
-      htmlContent += '    pre code { background: transparent; padding: 0; }\n'
-      htmlContent += '    a { color: #3498db; text-decoration: none; }\n'
-      htmlContent += '    a:hover { text-decoration: underline; }\n'
-      htmlContent += '    blockquote { border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; color: #666; }\n'
-      htmlContent += '    ul, ol { margin: 1em 0; padding-left: 2em; }\n'
-      htmlContent += '    li { margin: 0.5em 0; }\n'
-      htmlContent += '    img { max-width: 100%; height: auto; }\n'
-      htmlContent += '    table { border-collapse: collapse; width: 100%; margin: 1em 0; }\n'
-      htmlContent += '    th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }\n'
-      htmlContent += '    th { background-color: #f4f4f4; }\n'
-      htmlContent += '  </style>\n'
-      htmlContent += '</head>\n'
-      htmlContent += '<body>\n'
-      htmlContent += renderedContent.value + '\n'
-      htmlContent += '</body>\n'
-      htmlContent += '</html>'
-      
-      content = htmlContent
-      mimeType = 'text/html'
-      extension = 'html'
-      break
-    default:
-      content = props.report.content
-      mimeType = 'text/markdown'
-      extension = 'md'
+  try {
+    await downloadReport(props.report.date, format)
+    showExportMenu.value = false
+    console.log('Report exported as ' + format.toUpperCase())
+  } catch (err: unknown) {
+    console.error('导出失败:', err)
+    const apiError = err as ApiRequestError
+    if (apiError.status === 429 || apiError.message.includes('上限')) {
+      alert(apiError.message || '导出次数已达上限，请明天再试')
+      return
+    }
+    alert(apiError.message || '导出失败，请重试')
   }
-  
-  const blob = new Blob([content], { type: mimeType + ';charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'github_trending_' + props.report.date + '.' + extension
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-  
-  showExportMenu.value = false
-  console.log('📥 报告已导出为 ' + format.toUpperCase() + ' 格式')
 }
 
 async function copyToClipboard() {
@@ -436,12 +388,12 @@ async function copyToClipboard() {
     setTimeout(() => {
       isCopying.value = false
     }, 2000)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('复制失败:', err)
 
-    // 处理限流错误
-    if (err.response?.status === 429 || err.message?.includes('次数已达上限')) {
-      alert(err.message || '复制次数已达上限，请明天再试')
+    const apiError = err as ApiRequestError
+    if (apiError.status === 429 || apiError.message.includes('次数已达上限')) {
+      alert(apiError.message || '复制次数已达上限，请明天再试')
     } else {
       alert('复制失败，请重试')
     }

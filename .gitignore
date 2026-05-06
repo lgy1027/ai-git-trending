@@ -61,6 +61,8 @@ env.bak
 venv.bak
 backend/.env
 frontend/.env
+CLAUDE.md
+quests/
 
 # Database files
 *.db
@@ -73,3 +75,16 @@ output/
 # IDE settings
 .idea/
 .vscode/
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+backend/server.log
+backend/server.err.log
+backend/server.out.log
+frontend/vite.log
+backend/__pycache__/
+backend/app/__pycache__/
+backend/config/__pycache__/
+backend/routes/__pycache__/

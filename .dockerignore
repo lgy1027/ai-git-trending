@@ -1,28 +1,16 @@
-# Git
 .git
 .gitignore
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.venv
+.pytest_cache/
+.venv/
 venv/
-env/
-
-# IDE / Editor
-.vscode/
-.idea/
-
-# Environment files
+node_modules/
+frontend/node_modules/
+backend/output/
+dist/
+coverage/
+*.log
 .env
-*.env.local
-
-# OS files
-.DS_Store
-Thumbs.db
+backend/.env
+frontend/.env

@@ -18,56 +18,56 @@ def run_web_server(host='127.0.0.1', port=5001, debug=True):
     """
     启动Web API服务器
     """
-    logger.info(f"🌐 Starting Web API server on http://{host}:{port}")
+    logger.info(f"Starting Web API server on http://{host}:{port}")
     app.run(host=host, port=port, debug=debug, use_reloader=False)
 
 def run_scheduler():
     """
     运行定时任务调度器
     """
-    logger.info(f"🕒 Scheduled job to run every day at {SCHEDULE_TIME}")
-    logger.info("🏃 Performing initial run immediately...")
+    logger.info(f"Scheduled job to run every day at {SCHEDULE_TIME}")
+    logger.info("Performing initial run immediately...")
     
     # 立即执行一次任务
     try:
         job()
     except Exception as e:
-        logger.error(f"❌ Initial job execution failed: {e}")
+        logger.error(f"Initial job execution failed: {e}")
     
     # 设置定时任务
     schedule.every().day.at(SCHEDULE_TIME).do(job)
     
-    logger.info("⏰ Scheduler started, waiting for scheduled tasks...")
+    logger.info("Scheduler started, waiting for scheduled tasks...")
     while True:
         try:
             schedule.run_pending()
             time.sleep(60)  # 每分钟检查一次
         except KeyboardInterrupt:
-            logger.info("🛑 Scheduler interrupted by user")
+            logger.info("Scheduler interrupted by user")
             break
         except Exception as e:
-            logger.error(f"❌ Scheduler error: {e}")
+            logger.error(f"Scheduler error: {e}")
             time.sleep(60)
 
 def run_reporter_only():
     """
     仅运行报告生成器（不启动Web服务）
     """
-    logger.info("📊 Running GitHub Trending Reporter (Reporter Only Mode)")
+    logger.info("Running GitHub Trending Reporter (Reporter Only Mode)")
     run_scheduler()
 
 def run_web_only(host='127.0.0.1', port=5001, debug=True):
     """
     仅运行Web API服务（不运行定时任务）
     """
-    logger.info("🌐 Running GitHub Trending Reporter (Web Only Mode)")
+    logger.info("Running GitHub Trending Reporter (Web Only Mode)")
     run_web_server(host, port, debug)
 
 def run_full_service(host='127.0.0.1', port=5001, debug=False):
     """
     运行完整服务（Web API + 定时任务）
     """
-    logger.info("🚀 Starting GitHub Trending Reporter (Full Service Mode)")
+    logger.info("Starting GitHub Trending Reporter (Full Service Mode)")
     logger.info("=" * 60)
     
     # 在单独的线程中运行定时任务
@@ -78,11 +78,11 @@ def run_full_service(host='127.0.0.1', port=5001, debug=False):
     try:
         run_web_server(host, port, debug)
     except KeyboardInterrupt:
-        logger.info("🛑 Service interrupted by user")
+        logger.info("Service interrupted by user")
     except Exception as e:
-        logger.error(f"❌ Service error: {e}")
+        logger.error(f"Service error: {e}")
     finally:
-        logger.info("🔚 Service shutdown complete")
+        logger.info("Service shutdown complete")
 
 def main():
     """
@@ -133,15 +133,15 @@ def main():
     
     args = parser.parse_args()
     
-    logger.info("🚀 GitHub Trending Reporter")
+    logger.info("GitHub Trending Reporter")
     logger.info("=" * 60)
-    logger.info(f"📅 Current time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info(f"🎯 Mode: {args.mode}")
+    logger.info(f"Current time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"Mode: {args.mode}")
     if args.mode in ['web', 'full']:
-        logger.info(f"🌐 Web service: http://{args.host}:{args.port}")
-        logger.info(f"🐛 Debug mode: {'ON' if args.debug else 'OFF'}")
+        logger.info(f"Web service: http://{args.host}:{args.port}")
+        logger.info(f"Debug mode: {'ON' if args.debug else 'OFF'}")
     if args.mode in ['reporter', 'full']:
-        logger.info(f"⏰ Scheduled time: {SCHEDULE_TIME}")
+        logger.info(f"Scheduled time: {SCHEDULE_TIME}")
     logger.info("=" * 60)
     
     # 根据模式启动相应服务
@@ -153,10 +153,10 @@ def main():
         elif args.mode == 'reporter':
             run_reporter_only()
     except KeyboardInterrupt:
-        logger.info("🛑 Application interrupted by user")
+        logger.info("Application interrupted by user")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"❌ Application error: {e}")
+        logger.error(f"Application error: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':

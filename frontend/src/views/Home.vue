@@ -504,11 +504,24 @@ async function loadReportCards() {
   }
 }
 
+function getDaysForTimeFilter() {
+  switch (timeFilter.value) {
+    case 'today':
+      return 1
+    case 'month':
+      return 30
+    case 'week':
+    default:
+      return 7
+  }
+}
+
 async function loadTrendOverview() {
   try {
+    const days = getDaysForTimeFilter()
     const [trendsResponse, trendAreasResponse] = await Promise.all([
-      getTrends(),
-      getTrendData()
+      getTrends({ days }),
+      getTrendData({ days })
     ])
     trendsData.value = trendsResponse
     trendAreasData.value = trendAreasResponse
@@ -525,30 +538,15 @@ async function loadTrendOverview() {
 async function refreshData() {
   isLoading.value = true
   try {
-      // 根据timeFilter映射到相应的days参数
-      let days = 1; // 默认1天（今日）
-      switch (timeFilter.value) {
-        case 'today':
-          days = 1; // 今日数据使用1天
-          break;
-        case 'week':
-          days = 7; // 本周数据使用7天
-          break;
-        case 'month':
-          days = 30; // 本月数据使用30天
-          break;
-      }
-      
-      // 并行获取趋势数据和新兴技术领域数据
-      const [newTrendsResponse, newTrendAreasResponse] = await Promise.all([
-        getTrends({ days }),
-        getTrendData()
-      ]);
-    
-      // 更新趋势数据和新兴技术领域数据
-      trendsData.value = newTrendsResponse
-      trendAreasData.value = newTrendAreasResponse
-    
+    const days = getDaysForTimeFilter()
+    const [newTrendsResponse, newTrendAreasResponse] = await Promise.all([
+      getTrends({ days }),
+      getTrendData({ days })
+    ])
+
+    trendsData.value = newTrendsResponse
+    trendAreasData.value = newTrendAreasResponse
+
     // 更新项目数据
     updateTrendingProjects()
   } catch (error) {

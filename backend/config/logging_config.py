@@ -1,207 +1,151 @@
-"""
-日志配置模块
-提供统一的控制台日志管理功能，支持彩色输出和详细信息
-"""
+"""Lightweight logging helpers for the backend."""
+
+from __future__ import annotations
 
 import logging
 import sys
 from datetime import datetime
 from typing import Optional
 
+
 class ColoredFormatter(logging.Formatter):
-    """带颜色的日志格式化器"""
-    
-    # 颜色代码
     COLORS = {
-        'DEBUG': '\033[36m',    # 青色
-        'INFO': '\033[32m',     # 绿色
-        'WARNING': '\033[33m',  # 黄色
-        'ERROR': '\033[31m',    # 红色
-        'CRITICAL': '\033[35m', # 紫色
+        "DEBUG": "\033[36m",
+        "INFO": "\033[32m",
+        "WARNING": "\033[33m",
+        "ERROR": "\033[31m",
+        "CRITICAL": "\033[35m",
     }
-    RESET = '\033[0m'
-    
-    # Emoji 图标
-    ICONS = {
-        'DEBUG': '🔍',
-        'INFO': '✅',
-        'WARNING': '⚠️',
-        'ERROR': '❌', 
-        'CRITICAL': '🚨'
+    RESET = "\033[0m"
+    LABELS = {
+        "DEBUG": "DBG",
+        "INFO": "INF",
+        "WARNING": "WRN",
+        "ERROR": "ERR",
+        "CRITICAL": "CRT",
     }
-    
-    def format(self, record):
-        # 获取颜色和图标
-        color = self.COLORS.get(record.levelname, '')
-        icon = self.ICONS.get(record.levelname, '📝')
-        
-        # 格式化时间
-        timestamp = datetime.fromtimestamp(record.created).strftime('%H:%M:%S')
-        
-        # 获取文件名和行号
-        filename = record.filename
-        lineno = record.lineno
-        funcname = record.funcName
-        
-        # 构建消息
+
+    def format(self, record: logging.LogRecord) -> str:
+        color = self.COLORS.get(record.levelname, "")
+        label = self.LABELS.get(record.levelname, record.levelname)
+        timestamp = datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
+
         if record.levelno >= logging.ERROR:
-            # 错误级别显示更多信息
-            message = f"{color}{icon} {timestamp} | {record.levelname} | {filename}:{lineno} | {funcname}() | {record.getMessage()}{self.RESET}"
+            message = f"{label} {timestamp} | {record.filename}:{record.lineno} | {record.funcName}() | {record.getMessage()}"
         elif record.levelno >= logging.WARNING:
-            # 警告级别显示中等信息
-            message = f"{color}{icon} {timestamp} | {record.levelname} | {filename}:{lineno} | {record.getMessage()}{self.RESET}"
+            message = f"{label} {timestamp} | {record.filename}:{record.lineno} | {record.getMessage()}"
         else:
-            # 信息和调试级别显示简洁信息
-            message = f"{color}{icon} {timestamp} | {record.levelname} | {record.getMessage()}{self.RESET}"
-        
-        return message
+            message = f"{label} {timestamp} | {record.getMessage()}"
+
+        return f"{color}{message}{self.RESET}"
+
 
 class SimpleLogger:
-    """简单的日志记录器"""
-    
-    _instances = {}
-    
-    def __new__(cls, name: str = 'app', level: str = 'INFO'):
-        key = f"{name}_{level}"
+    _instances: dict[str, "SimpleLogger"] = {}
+
+    def __new__(cls, name: str = "app", level: str = "INFO"):
+        key = f"{name}_{level.upper()}"
         if key not in cls._instances:
             cls._instances[key] = super().__new__(cls)
             cls._instances[key]._initialized = False
         return cls._instances[key]
-    
-    def __init__(self, name: str = 'app', level: str = 'INFO'):
-        if self._initialized:
+
+    def __init__(self, name: str = "app", level: str = "INFO"):
+        if getattr(self, "_initialized", False):
             return
-            
+
         self.name = name
         self.logger = logging.getLogger(name)
-        
-        # 设置日志级别
-        self.logger.setLevel(getattr(logging, level.upper()))
-        
-        # 清除现有的处理器
+        self.logger.setLevel(getattr(logging, level.upper(), logging.INFO))
         self.logger.handlers.clear()
-        
-        # 创建控制台处理器
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, level.upper()))
-        
-        # 设置格式化器
-        formatter = ColoredFormatter()
-        console_handler.setFormatter(formatter)
-        
-        # 添加处理器
-        self.logger.addHandler(console_handler)
-        
-        # 防止重复日志
+
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(getattr(logging, level.upper(), logging.INFO))
+        handler.setFormatter(ColoredFormatter())
+
+        self.logger.addHandler(handler)
         self.logger.propagate = False
-        
         self._initialized = True
-    
+
     def debug(self, message: str, *args):
-        """调试日志"""
         self.logger.debug(message, *args)
-    
+
     def info(self, message: str, *args):
-        """信息日志"""
         self.logger.info(message, *args)
-    
+
     def warning(self, message: str, *args):
-        """警告日志"""
         self.logger.warning(message, *args)
-    
+
     def error(self, message: str, *args):
-        """错误日志"""
         self.logger.error(message, *args)
-    
+
     def critical(self, message: str, *args):
-        """严重错误日志"""
         self.logger.critical(message, *args)
-    
+
     def log_api_request(self, method: str, path: str, status_code: Optional[int] = None, duration: Optional[float] = None):
-        """记录API请求"""
-        if status_code and duration:
-            self.info(f"🌐 API {method} {path} -> {status_code} ({duration:.2f}s)")
+        if status_code is not None and duration is not None:
+            self.info("API %s %s -> %s (%.2fs)", method, path, status_code, duration)
         else:
-            self.info(f"🌐 API {method} {path}")
-    
+            self.info("API %s %s", method, path)
+
     def log_operation_start(self, operation: str):
-        """记录操作开始"""
-        self.info(f"🚀 开始执行: {operation}")
-    
+        self.info("Start: %s", operation)
+
     def log_operation_success(self, operation: str, duration: Optional[float] = None):
-        """记录操作成功"""
-        if duration:
-            self.info(f"✅ 操作完成: {operation} (耗时: {duration:.2f}s)")
+        if duration is not None:
+            self.info("Done: %s (%.2fs)", operation, duration)
         else:
-            self.info(f"✅ 操作完成: {operation}")
-    
+            self.info("Done: %s", operation)
+
     def log_operation_error(self, operation: str, error: Exception):
-        """记录操作错误"""
-        self.error(f"❌ 操作失败: {operation} - {str(error)}")
-    
+        self.error("Failed: %s - %s", operation, error)
+
     def log_data_count(self, data_type: str, count: int):
-        """记录数据统计"""
-        self.info(f"📊 {data_type}: {count} 条")
-    
+        self.info("%s: %s", data_type, count)
+
     def log_progress(self, current: int, total: int, operation: str = ""):
-        """记录进度"""
         percentage = (current / total * 100) if total > 0 else 0
         prefix = f"{operation} " if operation else ""
-        self.info(f"📈 {prefix}进度: {current}/{total} ({percentage:.1f}%)")
+        self.info("%sprogress: %s/%s (%.1f%%)", prefix, current, total, percentage)
 
-# 便捷函数
-def get_logger(name: str = 'app', level: str = 'INFO') -> SimpleLogger:
-    """
-    获取日志记录器的便捷函数
-    
-    Args:
-        name: 日志记录器名称，建议使用模块名
-        level: 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    
-    Returns:
-        配置好的日志记录器
-    """
+
+def get_logger(name: str = "app", level: str = "INFO") -> SimpleLogger:
     return SimpleLogger(name, level)
 
-# 装饰器函数
+
 def log_function_call(logger: Optional[SimpleLogger] = None):
-    """
-    装饰器：记录函数调用
-    """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            log = logger or get_logger(func.__module__)
-            log.debug(f"🔧 调用函数: {func.__name__}")
+            active_logger = logger or get_logger(func.__module__)
+            active_logger.debug("Calling %s", func.__name__)
             try:
                 result = func(*args, **kwargs)
-                log.debug(f"✅ 函数 {func.__name__} 执行成功")
+                active_logger.debug("%s completed", func.__name__)
                 return result
-            except Exception as e:
-                log.error(f"❌ 函数 {func.__name__} 执行失败: {str(e)}")
+            except Exception as exc:
+                active_logger.error("%s failed: %s", func.__name__, exc)
                 raise
+
         return wrapper
+
     return decorator
 
+
 def log_execution_time(logger: Optional[SimpleLogger] = None):
-    """
-    装饰器：记录函数执行时间
-    """
     def decorator(func):
         def wrapper(*args, **kwargs):
             import time
-            log = logger or get_logger(func.__module__)
-            
+
+            active_logger = logger or get_logger(func.__module__)
             start_time = time.time()
-            log.debug(f"⏱️ 开始执行: {func.__name__}")
-            
             try:
                 result = func(*args, **kwargs)
-                duration = time.time() - start_time
-                log.info(f"⚡ {func.__name__} 执行完成，耗时: {duration:.2f}秒")
+                active_logger.info("%s completed in %.2fs", func.__name__, time.time() - start_time)
                 return result
-            except Exception as e:
-                duration = time.time() - start_time
-                log.error(f"💥 {func.__name__} 执行失败，耗时: {duration:.2f}秒，错误: {str(e)}")
+            except Exception as exc:
+                active_logger.error("%s failed in %.2fs: %s", func.__name__, time.time() - start_time, exc)
                 raise
+
         return wrapper
+
     return decorator

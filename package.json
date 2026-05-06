@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "markdown-it-mermaid": "^0.2.5",
-    "mermaid": "^11.11.0"
-  }
-}

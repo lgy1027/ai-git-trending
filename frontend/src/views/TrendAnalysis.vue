@@ -316,6 +316,11 @@ const loadCharts = async () => {
   ])
 }
 
+const renderCharts = async () => {
+  await nextTick()
+  await loadCharts()
+}
+
 const loadTrendingProjects = async () => {
   loading.value = true
   try {
@@ -338,19 +343,17 @@ const viewProjectDetails = (project: Project) => {
 onMounted(async () => {
   loading.value = true
   try {
-    await Promise.all([
-      loadCharts(),
-      loadTrendingProjects()
-    ])
+    await loadTrendingProjects()
   } finally {
     loading.value = false
   }
+  await renderCharts()
 })
 
 // 监听时间筛选变化
-watch(selectedPeriod, () => {
-  // 重新加载数据
-  loadTrendingProjects()
+watch(selectedPeriod, async () => {
+  await loadTrendingProjects()
+  await renderCharts()
 })
 </script>
 

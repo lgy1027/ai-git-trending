@@ -15,80 +15,42 @@ from config.settings import (
 )
 from .github_api import get_entity_details, get_entity_repos
 
-logger = get_logger('summarizer', 'INFO')
+logger = get_logger("summarizer", "INFO")
 
-# 固定的技术领域分类
 TECH_DOMAINS = [
-    'AI/ML',          # 人工智能/机器学习
-    'LLM Apps',       # 大模型应用
-    'Web',            # Web开发
-    'Frontend',       # 前端框架
-    'Mobile',         # 移动开发
-    'DevOps',         # DevOps/云原生
-    'Data Science',   # 数据科学
-    'Database',       # 数据库
-    'Tools',          # API/工具库
-    'Security',       # 安全
-    'Blockchain',     # 区块链
-    'Gaming',         # 游戏开发
-    'OS',             # 操作系统/系统编程
-    'IoT',            # 物联网
-    'Other'           # 其他
+    "AI/ML",
+    "LLM Apps",
+    "Web",
+    "Frontend",
+    "Mobile",
+    "DevOps",
+    "Data Science",
+    "Database",
+    "Tools",
+    "Security",
+    "Blockchain",
+    "Gaming",
+    "OS",
+    "IoT",
+    "Other",
 ]
 
-# 领域关键词映射
 DOMAIN_KEYWORDS = {
-    'AI/ML': ['人工智能', 'AI', '机器学习', 'ML', '深度学习', '神经网络', 'LLM', '大模型', 'GPT', 'transformer', '模型训练', '算法'],
-    'LLM Apps': ['ChatGPT', 'Claude', 'GPT', 'LLM', '大语言模型', '对话', '聊天机器人', 'AI应用', 'AIGC', '生成式AI', 'RAG', '向量数据库'],
-    'Web': ['Web', '后端', 'API', 'REST', 'GraphQL', '服务端', '网站', 'HTTP', '服务器'],
-    'Frontend': ['前端', 'React', 'Vue', 'Angular', 'Svelte', 'UI', '组件库', 'CSS', 'JavaScript', 'TypeScript', 'DOM', '样式'],
-    'Mobile': ['移动', 'iOS', 'Android', 'Flutter', 'React Native', 'Swift', 'Kotlin', 'App', '小程序'],
-    'DevOps': ['DevOps', 'Docker', 'Kubernetes', 'K8S', 'CI/CD', '云原生', '容器', '自动化', '部署', 'Pipeline', 'Terraform'],
-    'Data Science': ['数据科学', '数据分析', '数据处理', 'Pandas', 'NumPy', '可视化', 'Jupyter', ' Notebook', '统计', '挖掘'],
-    'Database': ['数据库', 'DB', 'SQL', 'NoSQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', '存储', 'ORM'],
-    'Tools': ['工具', 'CLI', '命令行', '工具库', 'SDK', '开发工具', '效率', '脚本', '自动化工具'],
-    'Security': ['安全', 'Security', '加密', 'Auth', 'OAuth', 'JWT', '权限', '隐私', '漏洞', '渗透'],
-    'Blockchain': ['区块链', 'Blockchain', 'Web3', '以太坊', 'Solidity', '智能合约', 'Crypto', 'NFT', 'DeFi'],
-    'Gaming': ['游戏', 'Game', 'Unity', 'Unreal', '3D', 'VR', 'AR', '引擎'],
-    'OS': ['操作系统', 'Kernel', '系统编程', 'Rust', 'C/C++', '嵌入式', '驱动', '硬件', '底层'],
-    'IoT': ['物联网', 'IoT', '传感器', '嵌入式', '硬件', 'Arduino', '树莓派', 'MCU']
+    "AI/ML": ["人工智能", "AI", "机器学习", "ML", "深度学习", "神经网络", "模型训练", "算法"],
+    "LLM Apps": ["LLM", "大模型", "ChatGPT", "Claude", "AIGC", "生成式 AI", "RAG", "智能体", "Agent"],
+    "Web": ["Web", "后端", "API", "REST", "GraphQL", "HTTP", "服务端"],
+    "Frontend": ["前端", "React", "Vue", "Angular", "Svelte", "UI", "CSS", "JavaScript", "TypeScript"],
+    "Mobile": ["移动", "iOS", "Android", "Flutter", "React Native", "Swift", "Kotlin", "小程序"],
+    "DevOps": ["DevOps", "Docker", "Kubernetes", "K8S", "CI/CD", "容器", "部署", "Terraform"],
+    "Data Science": ["数据科学", "数据分析", "Pandas", "NumPy", "Jupyter", "统计", "可视化"],
+    "Database": ["数据库", "SQL", "NoSQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "ORM"],
+    "Tools": ["工具", "CLI", "命令行", "SDK", "开发工具", "自动化", "效率"],
+    "Security": ["安全", "加密", "Auth", "OAuth", "JWT", "权限", "隐私", "漏洞"],
+    "Blockchain": ["区块链", "Blockchain", "Web3", "以太坊", "Solidity", "智能合约", "Crypto", "DeFi"],
+    "Gaming": ["游戏", "Game", "Unity", "Unreal", "3D", "VR", "AR", "引擎"],
+    "OS": ["操作系统", "Kernel", "系统编程", "Rust", "C/C++", "驱动", "底层"],
+    "IoT": ["物联网", "IoT", "传感器", "嵌入式", "Arduino", "树莓派", "MCU"],
 }
-
-
-def normalize_tech_domain(domain_text: str) -> str:
-    """将LLM输出的技术领域标准化为固定分类"""
-    if not domain_text:
-        return 'Other'
-
-    domain_text = domain_text.strip().lower()
-
-    # 精确匹配
-    for domain in TECH_DOMAINS:
-        if domain_text == domain.lower():
-            return domain
-
-    # 关键词匹配
-    for domain, keywords in DOMAIN_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword.lower() in domain_text:
-                return domain
-
-    return 'Other'
-
-
-def extract_tech_domain(content: str) -> str:
-    """从LLM输出中提取技术领域"""
-    if not content:
-        return 'Other'
-
-    # 匹配 **核心领域**：xxx 格式
-    match = re.search(r'\*\*核心领域\*\*[:：]\s*(.+)', content)
-    if match:
-        domain_text = match.group(1).strip()
-        return normalize_tech_domain(domain_text)
-
-    return 'Other'
-
 
 OVERVIEW_HEADING_PATTERN = re.compile(r"(?m)^##\s+.+$")
 PROJECT_HEADING_PATTERN = re.compile(r"(?m)^#\s+.+$")
@@ -99,20 +61,55 @@ ENTITY_LINE_PATTERNS = (
 )
 
 OVERVIEW_SYSTEM_PROMPT = """你是资深技术编辑。
-你只输出最终答案，不输出思考过程、草稿、解释、提示词复述、示例、标签或代码块。
+你只输出最终答案，不输出思考过程、草稿、解释、提示词复述、样例、标签或代码块。
 输出语言必须是简体中文。"""
 
 PROJECT_SYSTEM_PROMPT = """你是资深开源项目分析师。
-你只输出最终 Markdown，不输出思考过程、草稿、解释、提示词复述、示例、XML 标签、<think> 标签或代码块围栏。
-输出语言必须是简体中文，内容要准确、克制、可读。"""
+你只输出最终 Markdown，不输出思考过程、草稿、解释、提示词复述、样例、XML 标签、<think> 标签或代码块围栏。
+输出语言必须是简体中文，内容要具体、克制、有判断。"""
 
 ENTITY_SYSTEM_PROMPT = """你是资深技术生态分析师。
-你只输出最终 Markdown，不输出思考过程、草稿、解释、提示词复述、示例、标签或代码块。
+你只输出最终 Markdown，不输出思考过程、草稿、解释、提示词复述、样例、标签或代码块。
 输出语言必须是简体中文。"""
 
 MAX_README_CHARS = 12000
+LLM_MAX_TOKENS = 2400
 
 _llm_client = None
+
+
+def normalize_tech_domain(domain_text: str) -> str:
+    if not domain_text:
+        return "Other"
+
+    domain_text = domain_text.strip().lower()
+
+    for domain in TECH_DOMAINS:
+        if domain_text == domain.lower():
+            return domain
+
+    for domain, keywords in DOMAIN_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword.lower() in domain_text:
+                return domain
+
+    return "Other"
+
+
+def extract_tech_domain(content: str) -> str:
+    if not content:
+        return "Other"
+
+    patterns = (
+        re.compile(r"(?m)^\*\*核心领域\*\*[:：]\s*(.+)$"),
+        re.compile(r"(?m)^-\s+\*\*核心领域\*\*[:：]\s*(.+)$"),
+    )
+    for pattern in patterns:
+        match = pattern.search(content)
+        if match:
+            return normalize_tech_domain(match.group(1).strip())
+
+    return "Other"
 
 
 def validate_llm_config():
@@ -120,53 +117,63 @@ def validate_llm_config():
         return False, "LLM_API_KEY is not configured"
     if not LLM_BASE_URL:
         return False, "LLM_BASE_URL is not configured"
+    if not LLM_BASE_URL.rstrip("/").endswith("/v1"):
+        return False, "LLM_BASE_URL must include the /v1 suffix"
     return True, None
 
 
-# 全局 httpx 客户端（绕过 OpenAI SDK 的追踪头问题）
-_llm_http_client = None
-
-
 def get_llm_client():
-    """返回兼容 OpenAI SDK 接口的 httpx 客户端"""
-    global _llm_http_client
+    global _llm_client
 
-    if _llm_http_client is None:
+    if _llm_client is None:
         is_valid, error = validate_llm_config()
         if not is_valid:
             logger.warning(f"LLM client not initialized: {error}")
             return None
         try:
-            import httpx
-            # 使用 httpx 直接调用，绕过 OpenAI SDK 的 x-stainless-* 头
-            _llm_http_client = httpx.Client(
+            _llm_client = OpenAI(
+                api_key=LLM_API_KEY,
+                base_url=LLM_BASE_URL.rstrip("/"),
                 timeout=LLM_TIMEOUT,
-                base_url=LLM_BASE_URL.rstrip('/') + '/v1',
-                headers={
-                    "Authorization": f"Bearer {LLM_API_KEY}",
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0"
-                }
             )
             logger.info(f"LLM client initialized successfully (timeout={LLM_TIMEOUT}s)")
-        except Exception as e:
-            logger.error(f"Failed to initialize LLM client: {e}")
+        except Exception as exc:
+            logger.error(f"Failed to initialize LLM client: {exc}")
             return None
 
-    return _llm_http_client
+    return _llm_client
+
+
+def extract_message_content(message) -> str:
+    if message is None:
+        return ""
+
+    content = getattr(message, "content", None)
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                if item.get("type") == "text" and item.get("text"):
+                    text_parts.append(item["text"])
+            else:
+                item_type = getattr(item, "type", None)
+                item_text = getattr(item, "text", None)
+                if item_type == "text" and item_text:
+                    text_parts.append(item_text)
+        return "\n".join(part.strip() for part in text_parts if part).strip()
+
+    return ""
 
 
 def strip_meta_lines(content):
     if not content:
         return content
 
-    cleaned = content
-
-    think_pattern = r"<think>[\s\S]*?</think>"
-    cleaned = re.sub(think_pattern, "", cleaned)
-
-    xml_pattern = r"<[^>]+>"
-    cleaned = re.sub(xml_pattern, "", cleaned)
+    cleaned = re.sub(r"<think>[\s\S]*?</think>", "", content)
+    cleaned = re.sub(r"<[^>]+>", "", cleaned)
 
     meta_patterns = [
         r"(?im)^.*?\bpotential output\b.*$",
@@ -200,25 +207,42 @@ def strip_meta_lines(content):
 
 def build_overview_prompt(projects):
     project_details = "\n".join(
-        [f"- {p['name']}: {p.get('description', 'No description')}" for p in projects]
+        [f"- {project['name']}: {project.get('description', 'No description')}" for project in projects]
     )
-    return f"""请基于以下 GitHub 热门项目列表，写一段“今日热点”总览。
+    return f"""请基于下面的 GitHub 热门项目列表，写一段面向开发者的“今日热点”总览。
 
 项目列表：
 {project_details}
 
 输出要求：
-1. 严格只输出两行。
-2. 第一行必须是 Markdown 二级标题，格式：## 今日热点：<主题>
+1. 严格只输出两行，不要多写。
+2. 第一行必须是 Markdown 二级标题，格式：## 今日热点：<一句话主题判断>
 3. 第二行必须是一整段中文，不要分点，不要换行。
-4. 第二行需要概括今天的技术主题，并自然点到项目覆盖范围，最后一句固定以“具体项目摘要如下：”结尾。
-5. 不要输出任何过程性文字、样例、解释或提示词复述。
+4. 这段话要回答三个问题：今天真正的技术主线是什么、这些项目为什么值得开发者关注、它们大致覆盖了哪些方向。
+5. 语气要像技术情报编辑的判断，不要写成宣传稿，也不要只是项目名罗列。
+6. 最后一句固定以“具体项目摘要如下：”结尾。
+7. 不要输出任何思考过程、提示词复述、样例、解释或标签。
+"""
+
+
+def build_overview_retry_prompt(projects):
+    project_details = "\n".join(
+        [f"- {project['name']}: {project.get('description', 'No description')}" for project in projects]
+    )
+    return f"""请根据下面的热门项目，输出开发者视角的今日热点总览：
+
+{project_details}
+
+严格只输出两行：
+第一行：## 今日热点：<一句话主题>
+第二行：一句中文判断，说明今天最值得关注的技术趋势，并以“具体项目摘要如下：”结尾。
+不要输出解释、草稿或思考过程。
 """
 
 
 def build_project_prompt(project):
-    readme_content = (project.get('readme_content') or 'README content not available.')[:MAX_README_CHARS]
-    return f"""请基于下面的项目信息，为 GitHub 热榜日报生成单项目分析。
+    readme_content = (project.get("readme_content") or "README content not available.")[:MAX_README_CHARS]
+    return f"""请基于下面的项目信息，生成一份更像“开发者情报”的 GitHub 热点项目分析。
 
 项目元数据：
 - 名称：{project['name']}
@@ -236,31 +260,84 @@ def build_project_prompt(project):
 README 素材：
 {readme_content}
 
-严格输出以下 Markdown 结构，不要多写：
+请严格输出以下 Markdown 结构，不要多写：
 # {project['name']} - 深度分析报告
-> **一句话总结**：一句中文总结
+> **一句话总结**：用一句中文说清它是什么、适合谁、为什么值得看
 
-## 项目定位
-- **解决问题**：1 句
-- **目标用户**：1 句
-- **差异化价值**：1 句
+## 热点判断
+- **为什么火**：判断它近期走红的核心原因，是技术突破、产品体验、模型风口、传播效应还是生态位置
+- **值得关注吗**：一句判断它对开发者的实际价值，避免空话
 
-## 技术观察
-- **实现特点**：1-2 句
-- **技术取舍**：1-2 句
+## 问题与价值
+- **解决问题**：它替代了什么旧做法，或者明显改善了哪段工作流
+- **目标用户**：最适合哪类开发者、团队或场景
+- **核心价值**：一句话说明它最打动人的点
 
-## 社区与风险
-- **社区信号**：1 句，结合 stars / forks / 更新频率
-- **关注点**：1 句，写潜在限制、风险或落地注意事项
+## 技术拆解
+- **关键机制**：点出架构、交互方式或实现路径里最值得看的部分
+- **技术取舍**：分析它为了速度、体验、成本、集成度做了什么取舍
+- **核心领域**：只能输出一个固定分类，必须从以下选一个：AI/ML、LLM Apps、Web、Frontend、Mobile、DevOps、Data Science、Database、Tools、Security、Blockchain、Gaming、OS、IoT、Other
+
+## 落地评估
+- **上手门槛**：判断开发者试用它的难度，结合文档、依赖、部署方式来写
+- **生产可用性**：判断它更像 demo、实验品、团队工具，还是可以进入真实流程
+
+## 风险提示
+- **主要风险**：指出维护、生态、模型依赖、许可、性能或安全中的关键风险
+- **需要继续观察**：说出一个后续最值得跟踪的信号
+
+## 结论
+- **建议动作**：只能从“值得立刻试用 / 值得持续跟踪 / 可以先观望”中选一个
+- **判断依据**：用一句话解释为什么给这个建议
 
 ## 项目链接
 - **GitHub**：{project.get('url', '')}
 
-要求：
+写作要求：
 1. 全部使用简体中文。
-2. 每个要点都写实，不要空话。
-3. 不要输出思考过程、提示词、示例、额外前言或结语。
-4. 不要使用代码块围栏。
+2. 语气像技术分析师，不像宣传稿。
+3. 每个要点都要具体，优先写判断和取舍，不要重复 README 原文。
+4. 不要输出思考过程、提示词、样例、前言、后记或代码块围栏。
+"""
+
+
+def build_project_retry_prompt(project):
+    readme_content = (project.get("readme_content") or "README content not available.")[:6000]
+    return f"""请基于下面信息，输出一份简洁但有判断的开发者情报。
+
+项目：{project['name']}
+描述：{project.get('description', 'N/A')}
+语言：{project.get('language', 'N/A')}
+Stars：{project.get('stars', 0)}
+Forks：{project.get('forks', 0)}
+链接：{project.get('url', '')}
+README 摘要：
+{readme_content}
+
+严格输出以下 Markdown：
+# {project['name']} - 深度分析报告
+> **一句话总结**：一句话说清它是什么、为什么值得看
+
+## 热点判断
+- **为什么火**：一句话判断热度来源
+- **值得关注吗**：一句话判断开发者是否该关注
+
+## 技术拆解
+- **关键机制**：一句话写出最值得看的实现点
+- **核心领域**：只能从 AI/ML、LLM Apps、Web、Frontend、Mobile、DevOps、Data Science、Database、Tools、Security、Blockchain、Gaming、OS、IoT、Other 中选一个
+
+## 落地评估
+- **适用场景**：一句话说明适合谁
+- **主要风险**：一句话说明最大风险
+
+## 结论
+- **建议动作**：只能从“值得立刻试用 / 值得持续跟踪 / 可以先观望”中选一个
+- **判断依据**：一句话解释原因
+
+## 项目链接
+- **GitHub**：{project.get('url', '')}
+
+不要输出思考过程、解释或多余前后文。
 """
 
 
@@ -268,7 +345,7 @@ def build_entity_prompt(owner, entity_details, top_repos, main_languages):
     top_repos_str = "\n".join(
         [f"- {repo['name']} ({repo['stars']} stars, {repo['language']})" for repo in top_repos]
     ) or "- 暂无代表仓库"
-    return f"""请基于以下 GitHub 开发者/组织信息，输出一个极简技术画像。
+    return f"""请基于下面的 GitHub 开发者 / 组织信息，输出一个极简但有判断的技术画像。
 
 实体信息：
 - 名称：{entity_details.get('name', owner)}
@@ -285,16 +362,13 @@ def build_entity_prompt(owner, entity_details, top_repos, main_languages):
 {main_languages}
 
 只输出下面三行 Markdown，不要多写：
-**技术影响力**：一句话概括其在技术社区的位置和影响力
-**技术栈偏好**：一句话分析其主要使用的语言和技术方向
-**核心领域**：一句话判断其主要聚焦的领域
+**技术影响力**：一句话概括其在技术社区里的位置，说明是头部组织、垂直专家、新兴作者还是热门项目驱动型账号
+**技术栈偏好**：一句话总结其主要技术方向和语言偏好，不要只机械罗列
+**核心领域**：一句话判断其主要聚焦领域，并尽量与其代表项目保持一致
 """
 
 
 def call_llm_with_retry(prompt, model, temperature, max_retries=None, delay=None, system_prompt=None):
-    import httpx
-    import json
-
     if max_retries is None:
         max_retries = LLM_MAX_RETRIES
     if delay is None:
@@ -314,31 +388,30 @@ def call_llm_with_retry(prompt, model, temperature, max_retries=None, delay=None
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
 
-            # 直接用 httpx 调用 API
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature
-            }
-            response = client.post(
-                "/chat/completions",
-                content=json.dumps(payload),
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=LLM_MAX_TOKENS,
             )
-            if response.status_code != 200:
-                raise Exception(f"API returned {response.status_code}: {response.text[:100]}")
-
-            result = response.json()
-            raw_content = result.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
+            choice = response.choices[0] if response.choices else None
+            message = choice.message if choice else None
+            raw_content = extract_message_content(message)
+            if not raw_content:
+                reasoning = getattr(message, "reasoning", None) or ""
+                reasoning = reasoning.strip() if isinstance(reasoning, str) else ""
+                if reasoning:
+                    logger.warning("LLM returned reasoning but no final content")
             clean_content = strip_meta_lines(raw_content)
             logger.debug(f"LLM API call succeeded on attempt {attempt + 1}")
             return clean_content
-        except Exception as e:
-            last_exception = e
-            error_msg = str(e)
+        except Exception as exc:
+            last_exception = exc
+            error_msg = str(exc)
             if "timeout" in error_msg.lower() or "504" in error_msg or "Gateway" in error_msg:
                 logger.warning(f"Attempt {attempt + 1}/{max_retries} timed out")
             else:
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {exc}")
 
             if attempt < max_retries - 1:
                 logger.info(f"Retrying in {delay} seconds...")
@@ -426,9 +499,9 @@ def get_entity_summary(owner):
         return ""
 
     top_repos = get_entity_repos(owner)
-    languages = [repo['language'] for repo in top_repos if repo['language'] and repo['language'] != 'N/A']
+    languages = [repo["language"] for repo in top_repos if repo["language"] and repo["language"] != "N/A"]
     main_languages = ", ".join(
-        dict.fromkeys(lang for lang, count in Counter(languages).most_common(3))
+        dict.fromkeys(lang for lang, _count in Counter(languages).most_common(3))
     ) if languages else "多样化或未指定"
 
     prompt = build_entity_prompt(owner, entity_details, top_repos, main_languages)
@@ -443,19 +516,23 @@ def get_entity_summary(owner):
 
 def get_summary_for_single_project(project):
     logger.info(f"Analyzing project: {project['name']}...")
-    if 'readme_content' not in project:
-        project['readme_content'] = 'README content not available.'
+    if "readme_content" not in project:
+        project["readme_content"] = "README content not available."
 
     prompt = build_project_prompt(project)
     project_summary = call_llm_with_retry(prompt, LLM_MODEL, 0.3, system_prompt=PROJECT_SYSTEM_PROMPT)
     if not project_summary:
-        logger.error(f"Error calling LLM API for {project['name']}: Failed after retries.")
-        return None
+        logger.warning(f"Primary project prompt failed for {project['name']}, retrying with simplified prompt.")
+        retry_prompt = build_project_retry_prompt(project)
+        project_summary = call_llm_with_retry(retry_prompt, LLM_MODEL, 0.2, system_prompt=PROJECT_SYSTEM_PROMPT)
+        if not project_summary:
+            logger.error(f"Error calling LLM API for {project['name']}: Failed after retries.")
+            return None
 
     project_summary = extract_project_report(project_summary)
 
     try:
-        owner = project['name'].split('/')[0]
+        owner = project["name"].split("/")[0]
         entity_summary = get_entity_summary(owner)
     except (IndexError, AttributeError):
         entity_summary = ""
@@ -468,6 +545,12 @@ def get_overview_intro(projects):
     prompt = build_overview_prompt(projects)
 
     overview = call_llm_with_retry(prompt, LLM_MODEL, 0.2, system_prompt=OVERVIEW_SYSTEM_PROMPT)
+    if overview:
+        return extract_overview_intro(overview)
+
+    logger.warning("Primary overview prompt failed, retrying with simplified prompt.")
+    retry_prompt = build_overview_retry_prompt(projects)
+    overview = call_llm_with_retry(retry_prompt, LLM_MODEL, 0.1, system_prompt=OVERVIEW_SYSTEM_PROMPT)
     if overview:
         return extract_overview_intro(overview)
 

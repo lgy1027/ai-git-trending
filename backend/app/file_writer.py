@@ -1,36 +1,63 @@
+"""Persist generated reports as Markdown and HTML."""
+
+from __future__ import annotations
+
 import os
-import markdown as md
+import re
 from datetime import datetime
-from config.settings import MD_DIR, HTML_DIR, HTML_TEMPLATE
+
+import markdown as md
+
 from config.logging_config import get_logger
+from config.settings import HTML_DIR, HTML_TEMPLATE, MD_DIR
 
-# 创建日志记录器
-logger = get_logger('file_writer', 'INFO')
+logger = get_logger("file_writer", "INFO")
 
-def save_summary_files(summary_content):
+
+def clean_markdown_content(content: str) -> str:
+    if not content:
+        return ""
+
+    cleaned = re.sub(r"<think>[\s\S]*?</think>", "", content, flags=re.IGNORECASE)
+    cleaned = re.sub(r"(?im)^.*\bpotential output\b.*$", "", cleaned)
+    cleaned = re.sub(r"(?im)^.*\blet'?s craft final answer\b.*$", "", cleaned)
+    cleaned = re.sub(r"(?im)^.*\bfinal answer[:：]?\s*$", "", cleaned)
+    cleaned = re.sub(r"(?im)^.*\banalysis[:：]?\s*$", "", cleaned)
+    cleaned = re.sub(r"(?im)^```(?:markdown)?\s*$", "", cleaned)
+
+    heading_match = re.search(r"(?m)^#{1,3}\s+.+$", cleaned)
+    if heading_match:
+        cleaned = cleaned[heading_match.start() :]
+
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def save_summary_files(summary_content: str):
     os.makedirs(MD_DIR, exist_ok=True)
     os.makedirs(HTML_DIR, exist_ok=True)
-    today_str = datetime.now().strftime('%Y-%m-%d')
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
     file_basename = f"github_trending_{today_str}"
-    md_filename = f"{file_basename}.md"
-    html_filename = f"{file_basename}.html"
-    md_path = os.path.join(MD_DIR, md_filename)
-    html_path = os.path.join(HTML_DIR, html_filename)
-    title = f"GitHub 热点日报 ({today_str})"
-    # 直接使用内容，不添加 YAML frontmatter
-    full_md_content = summary_content
+    md_path = os.path.join(MD_DIR, f"{file_basename}.md")
+    html_path = os.path.join(HTML_DIR, f"{file_basename}.html")
+
+    title = f"GitHub 热门项目精选分析 ({today_str})"
+    full_md_content = clean_markdown_content(summary_content)
+
     try:
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write(full_md_content)
-        logger.info(f"✅ Markdown file saved to: {md_path}")
-    except IOError as e:
-        logger.error(f"❌ Error writing Markdown file: {e}")
+        with open(md_path, "w", encoding="utf-8") as handle:
+            handle.write(full_md_content)
+        logger.info("Markdown report saved to %s", md_path)
+    except OSError as exc:
+        logger.error("Failed to write Markdown report: %s", exc)
         return
+
     try:
-        html_body = md.markdown(summary_content, extensions=['fenced_code', 'tables'])
+        html_body = md.markdown(full_md_content, extensions=["fenced_code", "tables"])
         final_html = HTML_TEMPLATE.format(title=title, content=f"<h1>{title}</h1>\n{html_body}")
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(final_html)
-        logger.info(f"✅ HTML file saved to: {html_path}")
-    except Exception as e:
-        logger.error(f"❌ Error creating or writing HTML file: {e}")
+        with open(html_path, "w", encoding="utf-8") as handle:
+            handle.write(final_html)
+        logger.info("HTML report saved to %s", html_path)
+    except Exception as exc:
+        logger.error("Failed to write HTML report: %s", exc)

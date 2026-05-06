@@ -207,11 +207,21 @@ class ProjectDatabase:
 
 
     # --- Methods for the old reporting feature (to keep it working) ---
-    def get_all_summarized_project_names(self):
+    def get_all_summarized_project_names(self, days_to_skip=None):
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT name FROM summarized_projects")
+                if days_to_skip is None:
+                    cursor.execute("SELECT name FROM summarized_projects")
+                else:
+                    cursor.execute(
+                        """
+                        SELECT name
+                        FROM summarized_projects
+                        WHERE summary_date >= date('now', ?)
+                        """,
+                        (f"-{int(days_to_skip)} days",),
+                    )
                 return {row[0] for row in cursor.fetchall()}
         except sqlite3.Error as e:
             logger.error(f"❌ Database error (get_all_summarized_project_names): {e}")
