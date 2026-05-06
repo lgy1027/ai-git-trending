@@ -186,6 +186,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import type { Report } from '../api/reports'
+import { copyReport, getRateLimitStatus } from '../api/reports'
 import { renderMarkdown, enhanceMarkdownDisplay } from '../utils/markdown-simple'
 
 // Props
@@ -335,7 +336,18 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function exportReport(format: 'md' | 'html' = 'md') {
+async function exportReport(format: 'md' | 'html' = 'md') {
+  // 先检查限流状态
+  try {
+    const status = await getRateLimitStatus()
+    if (status.export.remaining <= 0) {
+      alert('导出次数已达上限（每天5次），请明天再试')
+      return
+    }
+  } catch (e) {
+    console.warn('获取限流状态失败，继续尝试导出')
+  }
+
   if (!props.report.content) return
   
   let content: string
@@ -400,24 +412,39 @@ function exportReport(format: 'md' | 'html' = 'md') {
 }
 
 async function copyToClipboard() {
-  if (!props.report.content) return
-  
+  // 先检查限流状态
   try {
-    await navigator.clipboard.writeText(props.report.content)
+    const status = await getRateLimitStatus()
+    if (status.copy.remaining <= 0) {
+      alert('复制次数已达上限（每天5次），请明天再试')
+      return
+    }
+  } catch (e) {
+    console.warn('获取限流状态失败，继续尝试复制')
+  }
+
+  try {
+    // 使用带限流的 API 获取内容
+    const result = await copyReport(props.report.date)
+    await navigator.clipboard.writeText(result.content)
     console.log('📋 内容已复制到剪贴板')
-    
+
     // 设置复制状态为成功
     isCopying.value = true
-    
+
     // 2秒后恢复原始状态
     setTimeout(() => {
       isCopying.value = false
     }, 2000)
-  } catch (err) {
+  } catch (err: any) {
     console.error('复制失败:', err)
-    
-    // 可以添加复制失败的处理逻辑，例如弹出错误提示
-    alert('复制失败，请重试')
+
+    // 处理限流错误
+    if (err.response?.status === 429 || err.message?.includes('次数已达上限')) {
+      alert(err.message || '复制次数已达上限，请明天再试')
+    } else {
+      alert('复制失败，请重试')
+    }
   }
 }
 

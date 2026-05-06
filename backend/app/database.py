@@ -97,7 +97,19 @@ class ProjectDatabase:
                 
                 # 维度表索引
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_dim_projects_language ON dim_projects(language_id)")
-                
+
+                # ==================== IP 限流表（永久限制）====================
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS ip_rate_limits (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ip_address TEXT NOT NULL,
+                        action TEXT NOT NULL,
+                        count INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(ip_address, action)
+                    )""")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_ip_rate_limits_lookup ON ip_rate_limits(ip_address, action)")
+
                 conn.commit()
 
                 # 迁移：添加 tech_domain 列（如果不存在）
@@ -246,3 +258,68 @@ class ProjectDatabase:
                 conn.commit()
         except sqlite3.Error as e:
             logger.error(f"❌ Database error (add_summarized_project): {e}")
+
+    # ==================== IP 限流操作 ====================
+
+    def get_rate_limit_count(self, ip_address: str, action: str) -> int:
+        """获取指定 IP 和操作的计数（永久限制）"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT count FROM ip_rate_limits WHERE ip_address = ? AND action = ?",
+                    (ip_address, action)
+                )
+                result = cursor.fetchone()
+                return result[0] if result else 0
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (get_rate_limit_count): {e}")
+            return 0
+
+    def increment_rate_limit(self, ip_address: str, action: str, max_count: int = 5) -> tuple[bool, int]:
+        """
+        增加限流计数，返回 (是否允许, 剩余次数)
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # 先查询当前计数
+                cursor.execute(
+                    "SELECT count FROM ip_rate_limits WHERE ip_address = ? AND action = ?",
+                    (ip_address, action)
+                )
+                result = cursor.fetchone()
+                current_count = result[0] if result else 0
+
+                if current_count >= max_count:
+                    return False, max_count - current_count
+
+                # 增加计数
+                new_count = current_count + 1
+                cursor.execute(
+                    """INSERT INTO ip_rate_limits (ip_address, action, count)
+                       VALUES (?, ?, ?)
+                       ON CONFLICT(ip_address, action) DO UPDATE SET count = ?""",
+                    (ip_address, action, new_count, new_count)
+                )
+                conn.commit()
+                return True, max_count - new_count
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (increment_rate_limit): {e}")
+            return True, max_count  # 出错时默认允许
+
+    def get_all_rate_limits_for_ip(self, ip_address: str) -> dict:
+        """获取指定 IP 的所有限流信息"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT action, count FROM ip_rate_limits WHERE ip_address = ?",
+                    (ip_address,)
+                )
+                result = {row[0]: row[1] for row in cursor.fetchall()}
+                return result
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (get_all_rate_limits_for_ip): {e}")
+            return {}

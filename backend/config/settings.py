@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-# 获取项目根目录路径
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 获取 backend 目录路径
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv()
 
@@ -10,21 +10,46 @@ GITHUB_API_TOKEN = os.getenv('GITHUB_API_TOKEN')
 LLM_API_KEY = os.getenv('LLM_API_KEY')
 LLM_BASE_URL = os.getenv('LLM_BASE_URL')
 LLM_MODEL = os.getenv('LLM_MODEL', 'gpt-4-turbo')
+LLM_MAX_RETRIES = int(os.getenv('LLM_MAX_RETRIES', 3))
+LLM_RETRY_DELAY = int(os.getenv('LLM_RETRY_DELAY', 1))
+LLM_TIMEOUT = int(os.getenv('LLM_TIMEOUT', 60))
 
 SCHEDULE_TIME = os.getenv('SCHEDULE_TIME', "09:00")
 NUM_PROJECTS_TO_SUMMARIZE = int(os.getenv('NUM_PROJECTS_TO_SUMMARIZE', 8))
 MAX_PROJECTS_TO_SCRAPE = int(os.getenv('MAX_PROJECTS_TO_SCRAPE', 25))
 DAYS_TO_SKIP = int(os.getenv('DAYS_TO_SKIP', 7))
 
-# 设置输出目录路径 - 指向项目根目录下的output目录
-OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
-MD_DIR = os.path.join(OUTPUT_DIR, 'md')
-HTML_DIR = os.path.join(OUTPUT_DIR, 'html')
-DB_PATH = os.path.join(OUTPUT_DIR, 'reporter.db')
+# 设置输出目录路径 - 指向 backend 目录下的 output 目录
+OUTPUT_DIR = os.getenv('OUTPUT_DIR', os.path.join(BACKEND_DIR, 'output'))
+MD_DIR = os.getenv('MD_DIR', os.path.join(OUTPUT_DIR, 'md'))
+HTML_DIR = os.getenv('HTML_DIR', os.path.join(OUTPUT_DIR, 'html'))
+DB_PATH = os.getenv('DB_PATH', os.path.join(OUTPUT_DIR, 'reporter.db'))
+
+# 自动创建必要的目录
+def ensure_directories():
+    """确保输出目录存在，不存在则自动创建"""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(MD_DIR, exist_ok=True)
+    os.makedirs(HTML_DIR, exist_ok=True)
+
+# 在模块加载时自动创建目录
+ensure_directories()
 
 TRENDING_DATE_RANGE = os.getenv('TRENDING_DATE_RANGE', 'daily').lower()
 
 GITHUB_TRENDING_URL = f"https://github.com/trending?since={TRENDING_DATE_RANGE}"
+
+# IP 限流配置
+RATE_LIMIT_COPY = int(os.getenv('RATE_LIMIT_COPY', 5))  # 每个 IP 复制总次数
+RATE_LIMIT_EXPORT = int(os.getenv('RATE_LIMIT_EXPORT', 5))  # 每个 IP 导出总次数
+
+# Stats calculation constants
+STATS_BASE_CONTRIBUTORS = int(os.getenv('STATS_BASE_CONTRIBUTORS', 10))
+STATS_BASE_STARS = int(os.getenv('STATS_BASE_STARS', 100))
+STATS_BASE_FORKS = int(os.getenv('STATS_BASE_FORKS', 50))
+STATS_MIN_CONTRIBUTORS_SCORE = int(os.getenv('STATS_MIN_CONTRIBUTORS_SCORE', 5))
+STATS_MIN_STARS_SCORE = int(os.getenv('STATS_MIN_STARS_SCORE', 10))
+STATS_MIN_FORKS_SCORE = int(os.getenv('STATS_MIN_FORKS_SCORE', 5))
 
 SINGLE_PROJECT_PROMPT_TEMPLATE = """
 # 角色：顶级技术战略顾问 & 开源项目分析专家

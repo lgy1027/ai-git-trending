@@ -51,8 +51,8 @@
           </button>
         </div>
         <select v-model="selectedCategory" class="terminal-select">
-          <option v-for="category in categories" :key="category" :value="category">
-            {{ category === 'all' ? '全部领域' : category }}
+          <option v-for="category in categories" :key="category.name" :value="category.name">
+            {{ formatCategoryName(category) }}
           </option>
         </select>
       </div>
@@ -171,7 +171,7 @@ const timePeriods = [
   { label: '全年', value: 'yearly' }
 ]
 
-const categories = ref<string[]>(['all'])
+const categories = ref<{ name: string; count: number }[]>([{ name: 'all', count: 0 }])
 const loadingDomains = ref(false)
 
 // 加载技术领域分类
@@ -180,13 +180,25 @@ const loadTechDomains = async () => {
   try {
     const domains = await reportApi.getTechDomains()
     if (domains && domains.length > 0) {
-      categories.value = ['all', ...domains.map(d => d.name)]
+      // 过滤掉 count 为 0 的领域，但保留 'all'
+      const domainOptions = domains
+        .filter(d => d.count > 0)
+        .map(d => ({ name: d.name, count: d.count }))
+      categories.value = [{ name: 'all', count: domainOptions.reduce((sum, d) => sum + d.count, 0) }, ...domainOptions]
     }
   } catch (error) {
     console.error('加载技术领域失败:', error)
   } finally {
     loadingDomains.value = false
   }
+}
+
+// 格式化显示名称
+const formatCategoryName = (category: { name: string; count: number }) => {
+  if (category.name === 'all') {
+    return category.count > 0 ? `全部领域 (${category.count})` : '全部领域'
+  }
+  return `${category.name} (${category.count})`
 }
 
 // 根据选择的时间段计算日期范围

@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios'
 
 // 根据环境变量或开发/生产环境自动选择API地址
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
+// 开发环境使用相对路径走Vite代理，生产环境使用实际后端地址
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001')
 
 // 创建axios实例并配置
 const api = axios.create({
@@ -73,7 +74,11 @@ export interface Project {
   updated_at: string
   open_issues: number
   watchers: number
-  summary_date?: string
+  summary_date?: string | null
+  analysis_status?: 'completed' | 'pending'
+  trending_date?: string | null
+  trending_rank?: number | null
+  message?: string
 }
 
 export interface Stats {
@@ -141,7 +146,9 @@ export const reportApi = {
   async getReports(): Promise<Report[]> {
     try {
       const response = await api.get('/api/reports')
-      const reports = response.data.data?.items || response.data.data || []
+      const reports = Array.isArray(response.data)
+        ? response.data
+        : response.data.data?.items || response.data.data || []
       console.log(`📋 获取到 ${reports.length} 个报告`)
       return reports
     } catch (error) {
@@ -158,6 +165,32 @@ export const reportApi = {
       return response.data.data || response.data
     } catch (error) {
       console.error(`获取报告内容失败 (${date}):`, error)
+      throw error
+    }
+  },
+
+  // 复制报告内容（带 IP 限流）
+  async copyReport(date: string): Promise<{ content: string; rate_limit: { limit: number; remaining: number } }> {
+    try {
+      const response = await api.get(`/api/copy/${date}`)
+      console.log(`📋 复制报告: ${date}`)
+      return response.data.data || response.data
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        throw new Error(error.response.data.message || '复制次数已达上限')
+      }
+      console.error(`复制报告失败 (${date}):`, error)
+      throw error
+    }
+  },
+
+  // 获取限流状态
+  async getRateLimitStatus(): Promise<{ copy: { limit: number; remaining: number }; export: { limit: number; remaining: number } }> {
+    try {
+      const response = await api.get('/api/rate-limit-status')
+      return response.data.data || response.data
+    } catch (error) {
+      console.error('获取限流状态失败:', error)
       throw error
     }
   },
@@ -199,9 +232,8 @@ export const reportApi = {
   // 获取单个项目详情
   async getProjectDetails(projectName: string): Promise<Project> {
     try {
-      // 修改为使用查询参数，而不是路径参数，以更好地处理包含特殊字符的项目名称
       const response = await api.get('/api/project', {
-        params: { project_name: projectName }
+        params: { name: projectName }
       })
       console.log(`📦 获取项目详情: ${projectName}`)
       return response.data.data || response.data
@@ -247,17 +279,6 @@ export const reportApi = {
     }
   },
 
-  // 获取编程语言分布
-  async getLanguageDistribution(): Promise<{ name: string; count: number }[]> {
-    try {
-      const response = await api.get('/api/language-distribution')
-      return response.data.data || []
-    } catch (error) {
-      console.error('获取语言分布失败:', error)
-      return []
-    }
-  },
-
   // 获取项目趋势
   async getProjectTrend(days: number = 7): Promise<{ date: string; count: number }[]> {
     try {
@@ -285,7 +306,8 @@ export const reportApi = {
       const response = await api.get('/api/trends')
       console.log('🌐 获取语言分布数据成功', response.data)
       // 从 trends API 的 programmingLanguages 字段获取
-      const langData = response.data.data?.programmingLanguages || response.data.data?.most_frequent_languages || []
+      const data = response.data.data || response.data
+      const langData = data?.programmingLanguages || data?.most_frequent_languages || []
       const colorClasses = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-cyan-500', 'bg-pink-500']
       // 转换为 LanguageData 格式
       return langData.map((item: [string, number], index: number) => ({
@@ -307,7 +329,7 @@ export const reportApi = {
       const response = await api.get('/api/trends')
       console.log('📈 获取趋势数据成功', response.data)
       // 从 trends API 的 techDomains 字段获取新兴技术领域数据
-      const data = response.data.data
+      const data = response.data.data || response.data
       const techDomains = data?.techDomains || []
       // 转换为 TrendDataItem 格式
       return techDomains.map((domain: any, index: number) => ({
@@ -330,6 +352,8 @@ export const getProjectsByDate = reportApi.getProjectsByDate
 export const getProjects = reportApi.getProjects
 export const getProjectDetails = reportApi.getProjectDetails
 export const getReportByDate = reportApi.getReportContent
+export const copyReport = reportApi.copyReport
+export const getRateLimitStatus = reportApi.getRateLimitStatus
 export const getStats = reportApi.getStats
 export const getTrends = reportApi.getTrends
 export const healthCheck = reportApi.healthCheck

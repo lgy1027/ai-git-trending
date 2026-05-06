@@ -136,6 +136,13 @@ def get_stats():
 @stats_bp.route('/tech-domains')
 def get_tech_domains():
     """获取所有可用的技术领域分类"""
+    # 预定义的 15 个技术领域
+    predefined_domains = [
+        'AI/ML', 'LLM Apps', 'Web', 'Frontend', 'Mobile',
+        'DevOps', 'Data Science', 'Database', 'Tools',
+        'Security', 'Blockchain', 'Gaming', 'OS', 'IoT', 'Other'
+    ]
+
     try:
         with db._get_connection() as conn:
             cursor = conn.cursor()
@@ -148,7 +155,14 @@ def get_tech_domains():
             """)
             rows = cursor.fetchall()
 
-            domains = [{"name": row[0], "count": row[1]} for row in rows]
+            # 构建已有领域的计数映射
+            existing_domains = {row[0]: row[1] for row in rows}
+
+            # 返回所有预定义领域，count 为 0 表示没有数据
+            domains = [
+                {"name": domain, "count": existing_domains.get(domain, 0)}
+                for domain in predefined_domains
+            ]
 
             return success_response(domains)
     except Exception as e:
