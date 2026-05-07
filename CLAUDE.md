@@ -6,14 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **AI Git Trending** 是一个自动化分析 GitHub Trending 的机器人，为您每日精选、总结并生成技术洞察报告。
 
-## 主要功能
-
-1. **每日追踪与分析** - 自动抓取 GitHub Trending 热门项目，利用 LLM 进行深度分析
-2. **AI 驱动的项目分析** - 生成"一句话点评"、"技术亮点"、"项目定位"等洞察
-3. **交互式 Web 界面** - Vue.js 前端，支持报告浏览、搜索、筛选
-4. **趋势分析看板** - 多维度数据分析（热门语言分布、星标蹿升、技术领域分析）
-5. **数据持久化** - SQLite 存储历史数据，支持趋势分析
-
 ## 技术栈
 
 - **后端**: Python 3.x, Flask, SQLite
@@ -49,7 +41,7 @@ cd frontend
 # 安装依赖
 npm install
 
-# 开发模式
+# 开发模式（自动代理 API 到后端）
 npm run dev
 
 # 类型检查
@@ -80,6 +72,7 @@ SCHEDULE_TIME="09:00"
 NUM_PROJECTS_TO_SUMMARIZE=8
 MAX_PROJECTS_TO_SCRAPE=25
 TRENDING_DATE_RANGE=daily
+GITHUB_API_TOKEN="optional_github_token"
 ```
 
 ### 前端配置 (frontend/.env)
@@ -88,43 +81,31 @@ TRENDING_DATE_RANGE=daily
 VITE_API_BASE_URL=http://localhost:5001
 ```
 
-## 项目结构
-
-```
-├── backend/               # Flask 后端
-│   ├── app.py            # 主入口，支持三种运行模式
-│   ├── router.py         # Flask API 路由定义
-│   ├── config/           # 配置模块
-│   │   ├── settings.py   # 环境变量配置
-│   │   └── logging_config.py
-│   └── app/
-│       ├── main.py       # 定时任务入口
-│       ├── scraper.py    # GitHub 数据抓取
-│       ├── summarizer.py # LLM 分析生成
-│       ├── analyzer.py   # 趋势数据分析
-│       ├── database.py   # SQLite 数据库操作
-│       ├── github_api.py # GitHub API 调用
-│       └── file_writer.py# 报告文件输出
-
-├── frontend/             # Vue.js 前端
-│   ├── src/
-│   │   ├── views/       # 页面视图 (Home, Reports, Rankings, TrendAnalysis 等)
-│   │   ├── components/  # 可复用组件
-│   │   ├── api/         # API 调用封装
-│   │   └── composables/ # Vue 组合式函数
-│   └── package.json
-```
-
 ## 架构概要
 
 ### 后端架构
 
-后端采用 **Flask 蓝图模块化设计**，主要分为：
-
-- **路由层** (`router.py`) - 直接定义 Flask 路由，处理 HTTP 请求
-- **路由模块** (`routes/`) - 使用蓝图注册的项目(`projects_bp`)和统计(`stats_bp`)
-- **业务层** (`app/`) - 核心业务逻辑
-- **配置层** (`config/`) - 环境变量和日志配置
+```
+backend/
+├── app.py              # 主入口，支持 --mode full/web/reporter
+├── router.py           # 直接定义的 Flask 路由
+├── config/             # 配置模块
+│   ├── settings.py     # 环境变量配置（核心配置）
+│   └── logging_config.py
+├── app/                # 核心业务逻辑
+│   ├── main.py         # 定时任务入口
+│   ├── scraper.py      # GitHub Trending 页面抓取（BeautifulSoup）
+│   ├── summarizer.py   # LLM 调用核心，生成项目分析
+│   ├── analyzer.py     # 趋势数据分析，计算排名、语言分布
+│   ├── database.py     # SQLite 数据库操作
+│   ├── github_api.py   # GitHub API 调用
+│   ├── file_writer.py  # 报告文件输出
+│   └── cache.py        # IP 限流实现
+└── routes/             # 蓝图路由模块
+    ├── projects.py     # 项目相关 API (projects_bp)
+    ├── stats.py        # 统计相关 API (stats_bp)
+    └── common.py       # 通用 API
+```
 
 ### 数据模型（星型模型）
 
@@ -136,12 +117,22 @@ VITE_API_BASE_URL=http://localhost:5001
 
 ### 前端架构
 
-Vue 3 + TypeScript 单页应用：
-
-- **视图** (`views/`) - Home, Reports, Rankings, TrendAnalysis 等页面
-- **组件** (`components/`) - ProjectCard, ProjectModal, StatsChart 等
-- **状态管理** - Pinia store
-- **API 调用** - axios 封装
+```
+frontend/src/
+├── views/              # 页面视图
+│   ├── Home.vue        # 首页（报告浏览）
+│   ├── Reports.vue     # 报告列表
+│   ├── Rankings.vue    # 排行榜
+│   └── TrendAnalysis.vue  # 趋势分析
+├── components/         # 可复用组件
+│   ├── ProjectCard.vue # 项目卡片
+│   ├── ProjectModal.vue # 项目详情弹窗
+│   └── StatsChart.vue  # 统计图表
+├── api/                # API 调用封装 (axios)
+├── composables/        # Vue 组合式函数
+├── stores/             # Pinia 状态管理
+└── router/             # Vue Router 配置
+```
 
 ### 定时任务流程
 
@@ -157,86 +148,40 @@ job() → scrape_github_trending() → add_trending_snapshots()
 |------|------|
 | `/api/reports` | 获取所有报告列表 |
 | `/api/report/<date_str>` | 获取指定日期报告内容 |
+| `/api/projects/<date>` | 获取指定日期项目列表 |
+| `/api/project/<name>` | 获取项目详情 |
 | `/api/trends` | 获取趋势数据 (支持 days 参数: 7/30/182/365) |
 | `/api/stats` | 获取统计信息 |
 | `/api/language-distribution` | 获取语言分布 |
-| `/api/project/<name>` | 获取项目详情 |
 | `/api/trend-data` | 获取趋势指标数据 |
 | `/api/download/<date_str>/<format>` | 下载报告 (md/html)，带 IP 限流 |
 | `/api/copy/<date_str>` | 复制报告内容，带 IP 限流 |
 | `/api/rate-limit-status` | 获取当前 IP 限流状态 |
 
-## 关键模块
+## 关键模块说明
 
 - **summarizer.py** - LLM 调用核心，支持自定义 Prompt 生成项目分析、技术领域分类
-- **analyzer.py** - 趋势数据分析，计算项目排名、语言分布等
-- **database.py** - SQLite 封装，支持事实表/维度表设计
-- **scraper.py** - GitHub Trending 页面抓取
-- **cache.py** - IP 限流实现
-
-
-# CLAUDE.md
-
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
-
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-
-## 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+- **analyzer.py** - 趋势数据分析，计算项目排名、语言分布、技术领域统计
+- **database.py** - SQLite 封装，星型模型设计，支持事实表/维度表查询
+- **scraper.py** - GitHub Trending 页面抓取，使用 BeautifulSoup 解析
+- **cache.py** - IP 限流实现，基于内存的简单限流机制
+- **router.py** - 直接定义的 Flask 路由（非蓝图）
+- **routes/** - 蓝图注册的项目和统计路由
 
 ---
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+## 开发指南
+
+**避免过度设计**：
+- 不做过度抽象，单用途代码不需要抽象成通用模块
+- 不添加未请求的可配置项
+- 不处理不可能出现的异常场景
+
+**精确修改**：
+- 只修改与任务直接相关的代码
+- 不改善相邻代码的格式或注释
+- 匹配现有代码风格
+
+**目标驱动**：
+- 将任务转化为可验证的目标
+- 多步骤任务先列出计划再执行

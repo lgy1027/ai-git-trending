@@ -1,6 +1,6 @@
 # GitHub Trending Reporter 🚀
 
-English | [简体中文](./README.md)
+[English](./README-EN.md) | [简体中文](./README.md)
 
 **An automated bot that analyzes GitHub Trending, curates daily selections, and generates tech insight reports for you.**
 
@@ -21,7 +21,7 @@ English | [简体中文](./README.md)
 - **📦 Out-of-the-box Deployment**: Docker support for one-click deployment without complex environment configuration, supporting multiple running modes (full service, web-only, reporter-only).
 - **💾 Data Persistence**: Uses SQLite database to store historical data, avoiding duplicate analysis and supporting trend analysis features.
 
-## 📝 Output Example
+## 📊 Output Example
 
 The project generates daily reports in the `output` directory.
 
@@ -46,18 +46,19 @@ A clean, structured Markdown file suitable for direct publishing on various plat
 **One-Sentence Review**: ...
 ...
 ```
-![alt text](images/image.png) 
+
+![Markdown Example](images/image.png)
 
 ### Interactive Web UI
 
 An HTML file with a modern, card-based design for a better visual reading experience.
 
-![alt text](images/web.png "Web UI Example")
+![Web UI Example](images/web.png)
 
 ## 🛠️ Tech Stack
 
 - **Backend**: Python 3.x, Flask
-- **Frontend**: Vue.js, TypeScript
+- **Frontend**: Vue.js 3, TypeScript, Vite, Pinia, TailwindCSS
 - **Data Scraping**: `requests`, `BeautifulSoup4`
 - **AI Integration**: `openai`
 - **Task Scheduling**: `schedule`
@@ -70,71 +71,87 @@ The project adopts a frontend-backend separation architecture:
 
 ```
 ├── backend/           # Backend code directory
+│   ├── app.py         # Main program entry (supports 3 running modes)
+│   ├── router.py      # API route definitions
+│   ├── config/        # Configuration module
+│   │   ├── settings.py      # Environment variables configuration
+│   │   └── logging_config.py
 │   ├── app/           # Core functionality modules
 │   │   ├── analyzer.py      # Data analysis functionality
 │   │   ├── summarizer.py    # AI summary generation
 │   │   ├── scraper.py       # GitHub data scraping
 │   │   ├── database.py      # Database operations
+│   │   ├── github_api.py    # GitHub API calls
+│   │   ├── file_writer.py   # Report file output
+│   │   ├── cache.py         # IP rate limiting
 │   │   └── main.py          # Task execution entry point
-│   ├── app.py         # Main program entry
-│   └── router.py      # API route definitions
+│   └── routes/        # Blueprint route modules
+│       ├── projects.py      # Project-related APIs
+│       ├── stats.py         # Statistics-related APIs
+│       └── common.py        # Common APIs
 ├── frontend/          # Frontend code directory
 │   ├── src/           # Vue.js source code
-│   │   ├── components/      # Reusable components
 │   │   ├── views/           # Page views
-│   │   └── api/             # API call encapsulation
+│   │   ├── components/      # Reusable components
+│   │   ├── api/             # API call encapsulation
+│   │   ├── stores/          # Pinia state management
+│   │   ├── composables/     # Vue composables
+│   │   └── router/          # Vue Router configuration
 │   └── package.json   # Frontend dependency configuration
-├── .env.example       # Environment variables example file
 └── README.md          # Project documentation
 ```
 
-## 🚀 Installation and Setup
+## 🚀 Quick Start
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/lgy1027/ai-trending.git
-    cd ai-trending
-    ```
+### 1. Clone the Repository
 
-2.  **Install backend dependencies**
-    It's recommended to install in a virtual environment:
-    ```bash
-    cd backend
-    pip install -r requirements.txt
-    ```
-
-3.  **Configure environment variables**
-    The project uses a `.env` file to manage sensitive information. Copy `.env.example` to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    Then, edit the `.env` file to add your `LLM_API_KEY` and `LLM_BASE_URL`.
-    ```env
-    # .env
-    LLM_API_KEY="sk-your_api_key_here"
-    LLM_BASE_URL="https://api.openai.com/v1" # Change to your service's URL if using another provider
-    LLM_MODEL="gpt-4-turbo" # Optional, defaults to gpt-4-turbo
-    ```
-
-## 🏃‍♂️ How to Run
-
-### Method 1: Using Docker (Recommended)
-
-Ensure you have Docker installed, then execute:
 ```bash
-# Build the image
-docker build -t trending-reporter .
-
-# Run the container
-docker run --env-file .env -p 5001:5001 trending-reporter
+git clone https://github.com/lgy1027/ai-trending.git
+cd ai-trending
 ```
 
-### Method 2: Running Locally
+### 2. Configure Environment Variables
 
-Start the backend service (unified entry point):
+Copy `.env.example` to `.env` in both backend and frontend directories:
+
+```bash
+# Backend configuration
+cp backend/.env.example backend/.env
+
+# Frontend configuration
+cp frontend/.env.example frontend/.env
+```
+
+Edit the `backend/.env` file:
+
+```env
+# .env
+LLM_API_KEY="your_api_key"
+LLM_BASE_URL="https://api.openai.com/v1"
+LLM_MODEL="gpt-4-turbo"
+```
+
+### 3. Run the Project
+
+#### Method 1: Using Docker (Recommended)
+
+```bash
+docker compose up
+```
+
+#### Method 2: Running Locally
+
+Install backend dependencies:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Start the backend service:
+
 ```bash
 # Run full service (Web API + scheduled tasks) - Recommended
-cd backend
 python app.py
 
 # Run only Web API service (for frontend development)
@@ -144,10 +161,11 @@ python app.py --mode web --debug
 python app.py --mode reporter
 
 # Custom host and port
-python app.py --host 0.0.0.0 --port 8080 --debug
+python app.py --host 0.0.0.0 --port 5001 --debug
 ```
 
-Install and start the frontend service (if you need the web interface):
+Install and start the frontend (if you need the web interface):
+
 ```bash
 cd frontend
 npm install
@@ -155,6 +173,7 @@ npm run dev
 ```
 
 Access URLs:
+
 - **Backend API**: `http://127.0.0.1:5001`
 - **Frontend Interface**: `http://127.0.0.1:5173`
 
@@ -162,44 +181,43 @@ Access URLs:
 
 ### Environment Variables (`.env`)
 
-- `LLM_API_KEY`: **(Required)** Your Large Language Model service API Key.
-- `LLM_BASE_URL`: **(Required)** The base URL for your Large Language Model service.
-- `LLM_MODEL`: (Optional) The model to use, defaults to `gpt-4-turbo`.
-- `GITHUB_API_TOKEN`: (Optional) Your GitHub API Token. With this configured, you can get more detailed project information and avoid issues caused by API rate limits.
-- `SCHEDULE_TIME`: (Optional) The time for the daily task to run, in "HH:MM" format. Defaults to `"09:00"`.
-- `NUM_PROJECTS_TO_SUMMARIZE`: (Optional) The number of new projects to analyze each day. Defaults to `8`.
-- `MAX_PROJECTS_TO_SCRAPE`: (Optional) The range of projects to filter from the Trending list. Defaults to `25`.
-- `TRENDING_DATE_RANGE`: (Optional) The time range to scrape. Options are `daily`, `weekly`, `monthly`. Defaults to `daily`.
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LLM_API_KEY` | ✅ | - | Large Language Model service API Key |
+| `LLM_BASE_URL` | ✅ | - | Base URL for LLM service |
+| `LLM_MODEL` | ❌ | `gpt-4-turbo` | Model to use |
+| `GITHUB_API_TOKEN` | ❌ | - | GitHub API Token (optional, for more detailed project info) |
+| `SCHEDULE_TIME` | ❌ | `09:00` | Daily task execution time (HH:MM) |
+| `NUM_PROJECTS_TO_SUMMARIZE` | ❌ | `8` | Number of new projects to analyze daily |
+| `MAX_PROJECTS_TO_SCRAPE` | ❌ | `25` | Number of projects to filter from Trending list |
+| `TRENDING_DATE_RANGE` | ❌ | `daily` | Scrape time range: `daily`/`weekly`/`monthly` |
 
-### Running Mode Parameters
+### Running Modes
 
-The project supports three running modes, specified via the `--mode` parameter:
+Specify via the `--mode` parameter:
 
-- `full`: Run the full service (Web API + scheduled tasks) [Default]
-- `web`: Run only the Web API service (suitable for frontend development)
-- `reporter`: Run only the scheduled report generator (suitable for background running)
+| Mode | Description |
+|------|-------------|
+| `full` | Run full service (Web API + scheduled tasks) [Default] |
+| `web` | Run only Web API service (for frontend development) |
+| `reporter` | Run only scheduled report generator (for background running) |
 
 Other common parameters:
-- `--host`: Web service listening address, defaults to `127.0.0.1`
-- `--port`: Web service port, defaults to `5001`
-- `--debug`: Enable debug mode, suitable for development environment
+
+- `--host`: Web service listening address, default `127.0.0.1`
+- `--port`: Web service port, default `5001`
+- `--debug`: Enable debug mode
 
 ## 🤝 Contributing
 
 Contributions of any kind are welcome! If you have a great idea or find a bug, feel free to open an Issue or submit a Pull Request.
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
-
 ## WeChat
 
-Welcome to follow us for real-time technical analysis and cutting-edge news.
+Welcome to follow me for real-time technical analysis and cutting-edge news.
 
 <img src="images/wechat.png" width="300" height="300">
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
