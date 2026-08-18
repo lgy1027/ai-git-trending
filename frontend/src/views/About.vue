@@ -10,8 +10,8 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND INTEL</h1>
-            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">TECH INTELLIGENCE TERMINAL</p>
+            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND</h1>
+            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING DAILY</p>
           </div>
         </div>
 

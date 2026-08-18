@@ -10,6 +10,7 @@ from flask import Blueprint, make_response, request
 from app.cache import generate_cache_key, get_cache
 from app.database import ProjectDatabase
 from app.response import ErrorCode, error_response, success_response
+from config.categories import TECH_DOMAINS
 from config.logging_config import get_logger
 from config.settings import (
     MD_DIR,
@@ -102,7 +103,7 @@ def get_stats():
             stable = cursor.fetchone()[0] or 0
 
             cursor.execute(
-                "SELECT COUNT(*) FROM summarized_projects WHERE updated_at < ? OR updated_at = 'N/A' OR updated_at IS NULL",
+                "SELECT COUNT(*) FROM summarized_projects WHERE updated_at < ? OR updated_at IS NULL",
                 (ninety_days_ago,),
             )
             needs_attention = cursor.fetchone()[0] or 0
@@ -133,40 +134,37 @@ def get_stats():
 
 @stats_bp.route("/tech-domains")
 def get_tech_domains():
-    predefined_domains = [
-        "AI/ML",
-        "LLM Apps",
-        "Web",
-        "Frontend",
-        "Mobile",
-        "DevOps",
-        "Data Science",
-        "Database",
-        "Tools",
-        "Security",
-        "Blockchain",
-        "Gaming",
-        "OS",
-        "IoT",
-        "Other",
-    ]
-
     try:
+        days = request.args.get("days", default=30, type=int)
         with db._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT tech_domain, COUNT(*) AS count
-                FROM summarized_projects
-                WHERE tech_domain IS NOT NULL AND tech_domain != ''
-                GROUP BY tech_domain
-                ORDER BY count DESC
-                """
-            )
+            if days and days > 0:
+                cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+                cursor.execute(
+                    """
+                    SELECT tech_domain, COUNT(*) AS count
+                    FROM summarized_projects
+                    WHERE tech_domain IS NOT NULL AND tech_domain != ''
+                      AND summary_date >= ?
+                    GROUP BY tech_domain
+                    ORDER BY count DESC
+                    """,
+                    (cutoff,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT tech_domain, COUNT(*) AS count
+                    FROM summarized_projects
+                    WHERE tech_domain IS NOT NULL AND tech_domain != ''
+                    GROUP BY tech_domain
+                    ORDER BY count DESC
+                    """
+                )
             rows = cursor.fetchall()
 
         existing = {row[0]: row[1] for row in rows}
-        data = [{"name": domain, "count": existing.get(domain, 0)} for domain in predefined_domains]
+        data = [{"name": domain, "count": existing.get(domain, 0)} for domain in TECH_DOMAINS]
         return success_response(data)
     except Exception as exc:
         logger.error("Failed to retrieve tech domains: %s", exc)

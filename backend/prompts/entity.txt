@@ -1,0 +1,20 @@
+请基于下面的 GitHub 开发者 / 组织信息，输出一个极简但有判断的技术画像。
+
+实体信息：
+- 名称：{entity_name}
+- 类型：{entity_type}
+- 简介：{entity_bio}
+- 创建时间：{entity_created_at}
+- Followers：{entity_followers}
+- Public Repos：{entity_public_repos}
+
+代表仓库：
+{top_repos_str}
+
+主要语言：
+{main_languages}
+
+只输出下面三行 Markdown，不要多写：
+**技术影响力**：一句话概括其在技术社区里的位置，说明是头部组织、垂直专家、新兴作者还是热门项目驱动型账号
+**技术栈偏好**：一句话总结其主要技术方向和语言偏好，不要只机械罗列
+**核心领域**：一句话判断其主要聚焦领域，并尽量与其代表项目保持一致

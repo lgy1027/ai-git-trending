@@ -15,7 +15,7 @@
                   </svg>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-400/80">INTELLIGENCE REPORT</p>
+                  <p class="mb-1 text-[10px] uppercase tracking-[0.22em] text-cyan-400/80">趋势报告</p>
                   <h3 class="truncate text-lg font-semibold text-slate-100 lg:text-2xl">
                     GitHub 热门项目报告
                   </h3>

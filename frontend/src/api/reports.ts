@@ -316,8 +316,8 @@ export const reportApi = {
     return unwrap(response.data)
   },
 
-  async getTechDomains(): Promise<TechDomainData[]> {
-    const response = await api.get<ApiEnvelope<TechDomainData[]>>('/api/tech-domains')
+  async getTechDomains(params?: { days?: number }): Promise<TechDomainData[]> {
+    const response = await api.get<ApiEnvelope<TechDomainData[]>>('/api/tech-domains', { params })
     return unwrap(response.data)
   },
 

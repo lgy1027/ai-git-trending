@@ -30,12 +30,6 @@
               <component :is="stat.icon" class="text-amber-400/80" />
             </div>
           </div>
-          <div class="mt-4 h-1 rounded-full bg-slate-800/70 overflow-hidden">
-            <div
-              class="h-full rounded-full bg-amber-400/70 transition-all duration-1000"
-              :style="{ width: `${stat.progress}%` }"
-            ></div>
-          </div>
         </div>
       </div>
 
@@ -89,20 +83,21 @@
 
           <div class="rounded-lg border border-slate-800/70 bg-slate-900/40 p-5">
             <h4 class="text-sm font-light text-slate-300 mb-4 tracking-wide">活跃度分析</h4>
-            <div class="grid grid-cols-3 overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/30">
+            <div v-if="activityBreakdown" class="grid grid-cols-3 overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/30">
               <div class="text-center px-3 py-4">
-                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown?.recentlyActive ?? '-' }}</div>
+                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown.recentlyActive }}</div>
                 <div class="text-[10px] text-slate-500 mt-2">活跃</div>
               </div>
               <div class="text-center px-3 py-4 border-l border-slate-800/60">
-                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown?.stable ?? '-' }}</div>
+                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown.stable }}</div>
                 <div class="text-[10px] text-slate-500 mt-2">稳定</div>
               </div>
               <div class="text-center px-3 py-4 border-l border-slate-800/60">
-                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown?.needsAttention ?? '-' }}</div>
+                <div class="text-2xl font-light text-slate-100">{{ activityBreakdown.needsAttention }}</div>
                 <div class="text-[10px] text-slate-500 mt-2">需关注</div>
               </div>
             </div>
+            <div v-else class="empty-panel">暂无活跃度数据</div>
           </div>
 
           <div class="rounded-lg border border-slate-800/70 bg-slate-900/40 p-5">
@@ -117,19 +112,12 @@
           </div>
 
           <div class="rounded-lg border border-slate-800/70 bg-slate-900/40 p-5">
-            <div class="flex items-center justify-between gap-3 mb-4">
-              <h4 class="text-sm font-light text-slate-300 tracking-wide">
-                {{ props.surgingMode === 'hot' ? '今日高热项目' : '上升最快' }}
-              </h4>
-              <span v-if="props.surgingMode === 'hot'" class="text-[10px] text-slate-500">历史不足</span>
-            </div>
+            <h4 class="text-sm font-light text-slate-300 mb-4 tracking-wide">上升最快</h4>
             <div v-if="props.surgingProjects && props.surgingProjects.length > 0" class="space-y-2">
               <div v-for="project in props.surgingProjects" :key="project.name" class="flex items-center gap-2 py-1">
                 <span class="text-xs text-slate-500 w-4">{{ project.rank }}</span>
                 <span class="text-sm text-slate-300 font-light truncate flex-1">{{ project.name.split('/')[1] || project.name }}</span>
-                <span class="text-xs text-amber-400 font-light">
-                  {{ props.surgingMode === 'hot' ? formatCompactNumber(project.star_increase) : `+${project.star_increase}` }}
-                </span>
+                <span class="text-xs text-amber-400 font-light">+{{ project.star_increase }}</span>
               </div>
             </div>
             <div v-else class="empty-panel">
@@ -184,25 +172,23 @@ const statsData = computed(() => {
   return [
     {
       key: 'totalReports',
-      label: '总报告数',
+      label: '累计报告',
       value: Math.round(props.stats.totalReports || 0).toLocaleString(),
       icon: BarChartIcon,
       bgClass: 'bg-gradient-to-br from-blue-500 to-blue-600',
       badgeClass: 'bg-blue-500/20 text-blue-400',
       progressClass: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      change: '',
-      progress: Math.min(100, ((props.stats.totalReports || 0) / 1000) * 100)
+      change: ''
     },
     {
       key: 'totalProjects',
-      label: '总项目数',
+      label: '累计项目',
       value: Math.round(props.stats.totalProjects || 0).toLocaleString(),
       icon: CubeIcon,
       bgClass: 'bg-gradient-to-br from-purple-500 to-purple-600',
       badgeClass: 'bg-purple-500/20 text-purple-400',
       progressClass: 'bg-gradient-to-r from-purple-500 to-purple-600',
-      change: '',
-      progress: Math.min(100, ((props.stats.totalProjects || 0) / 500) * 100)
+      change: ''
     },
     {
       key: 'weeklyNew',
@@ -212,8 +198,7 @@ const statsData = computed(() => {
       bgClass: 'bg-gradient-to-br from-green-500 to-green-600',
       badgeClass: 'bg-green-500/20 text-green-400',
       progressClass: 'bg-gradient-to-r from-green-500 to-green-600',
-      change: '',
-      progress: Math.min(100, ((props.stats.weeklyNew || 0) / 50) * 100)
+      change: ''
     },
     {
       key: 'avgContributors',
@@ -223,8 +208,7 @@ const statsData = computed(() => {
       bgClass: 'bg-gradient-to-br from-orange-500 to-orange-600',
       badgeClass: 'bg-orange-500/20 text-orange-400',
       progressClass: 'bg-gradient-to-r from-orange-500 to-orange-600',
-      change: '',
-      progress: Math.min(100, ((props.stats.avgContributors || 0) / 200) * 100)
+      change: ''
     }
   ]
 })
@@ -236,13 +220,7 @@ const top5LanguageData = computed(() => {
 
 const trendData = computed(() => props.trendData ?? [])
 
-const activityBreakdown = computed(() => {
-  return props.stats?.activityBreakdown ?? {
-    recentlyActive: props.stats?.weeklyNew ?? 0,
-    stable: Math.max((props.stats?.totalProjects ?? 0) - (props.stats?.weeklyNew ?? 0), 0),
-    needsAttention: 0
-  }
-})
+const activityBreakdown = computed(() => props.stats?.activityBreakdown ?? null)
 
 const formatCompactNumber = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M★`

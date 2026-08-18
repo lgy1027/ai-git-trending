@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from config.logging_config import get_logger
 from app.database import ProjectDatabase
+from config.categories import TECH_DOMAINS
 
 logger = get_logger('analyzer', 'INFO')
 
@@ -119,33 +120,49 @@ def analyze_trends(days=7):
     ]
     
     conn.close()
-    
+
     logger.info(f"趋势分析完成，发现{len(most_frequent_projects)}个热门项目，{len(most_frequent_languages)}种热门语言，{len(surging_projects)}个快速增长项目")
-    
-    # 为了兼容前端Home-simple.vue中的数据结构需求，
-    # 将后端数据映射到前端期望的字段名
-    
-    # 计算语言总数用于百分比计算
-    total_language_count = sum(lang[1] for lang in most_frequent_languages) if most_frequent_languages else 1
-    
-    # 生成技术领域数据
-    tech_domains = []
-    domain_names = ["AI/机器学习", "Web开发", "移动开发", "DevOps", "数据科学"]
-    for i, lang in enumerate(most_frequent_languages[:5]):  # 只取前5种语言
-        tech_domains.append({
-            "name": domain_names[i % len(domain_names)],
-            "count": lang[1],
-            "percentage": round((lang[1] / total_language_count) * 100)
-        })
-    
+
+    # 技术领域数据：从真实 LLM 归类结果统计（summarized_projects.tech_domain），
+    # 过滤出当前时间窗口内有 summary_date 记录的项目，按预设 15 分类输出。
+    domain_rows = {}
+    try:
+        with db._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT tech_domain, COUNT(*) AS count
+                FROM summarized_projects
+                WHERE summary_date BETWEEN ? AND ?
+                  AND tech_domain IS NOT NULL AND tech_domain != ''
+                GROUP BY tech_domain
+                """,
+                (start_date.isoformat(), end_date.isoformat()),
+            )
+            domain_rows = {row[0]: row[1] for row in cursor.fetchall()}
+    except Exception as exc:
+        logger.error("Failed to load tech domain distribution: %s", exc)
+
+    tech_domains_total = sum(domain_rows.values())
+    tech_domains = [
+        {
+            "name": domain,
+            "count": domain_rows.get(domain, 0),
+            "percentage": round((domain_rows.get(domain, 0) / tech_domains_total) * 100) if tech_domains_total else 0,
+        }
+        for domain in TECH_DOMAINS
+        if domain_rows.get(domain, 0) > 0
+    ]
+    tech_domains.sort(key=lambda d: d["count"], reverse=True)
+
     return {
         "time_window_days": days,
-        "topProjects": most_frequent_projects,  # 前端期望的字段名
-        "programmingLanguages": most_frequent_languages,  # 前端期望的字段名
-        "techDomains": tech_domains,  # 生成的技术领域数据
-        "surgingProjects": surging_projects,  # 这个字段名前后端一致
-        "most_frequent_projects": most_frequent_projects,  # 保留原始字段以兼容其他视图
-        "most_frequent_languages": most_frequent_languages  # 保留原始字段以兼容其他视图
+        "topProjects": most_frequent_projects,
+        "programmingLanguages": most_frequent_languages,
+        "techDomains": tech_domains,
+        "surgingProjects": surging_projects,
+        "most_frequent_projects": most_frequent_projects,
+        "most_frequent_languages": most_frequent_languages,
     }
 
 def get_trend_by_tag(tag_name, days=30):

@@ -1,6 +1,6 @@
 <template>
   <div class="terminal-page">
-    <!-- 顶部导航栏 - 技术情报终端 -->
+    <!-- 顶部导航栏 -->
     <header class="terminal-header">
       <div class="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-3 lg:px-6">
         <div class="flex items-center gap-3">
@@ -10,13 +10,13 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND INTEL</h1>
-            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">TECH INTELLIGENCE TERMINAL</p>
+            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND</h1>
+            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING DAILY</p>
           </div>
         </div>
 
         <nav class="hidden items-center gap-1 md:flex">
-          <router-link to="/" class="terminal-nav">情报台</router-link>
+          <router-link to="/" class="terminal-nav">首页</router-link>
           <router-link to="/rankings" class="terminal-nav">排行榜</router-link>
           <router-link to="/trend-analysis" class="terminal-nav">趋势图谱</router-link>
           <router-link to="/favorites" class="terminal-nav">收藏</router-link>

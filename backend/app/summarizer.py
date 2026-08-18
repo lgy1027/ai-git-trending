@@ -4,6 +4,7 @@ import time
 
 from openai import OpenAI
 
+from config.categories import TECH_DOMAINS, tech_domains_for_prompt
 from config.logging_config import get_logger
 from config.settings import (
     LLM_API_KEY,
@@ -14,26 +15,9 @@ from config.settings import (
     LLM_TIMEOUT,
 )
 from .github_api import get_entity_details, get_entity_repos
+from prompts import render_prompt
 
 logger = get_logger("summarizer", "INFO")
-
-TECH_DOMAINS = [
-    "AI/ML",
-    "LLM Apps",
-    "Web",
-    "Frontend",
-    "Mobile",
-    "DevOps",
-    "Data Science",
-    "Database",
-    "Tools",
-    "Security",
-    "Blockchain",
-    "Gaming",
-    "OS",
-    "IoT",
-    "Other",
-]
 
 DOMAIN_KEYWORDS = {
     "AI/ML": ["人工智能", "AI", "机器学习", "ML", "深度学习", "神经网络", "模型训练", "算法"],
@@ -209,163 +193,66 @@ def build_overview_prompt(projects):
     project_details = "\n".join(
         [f"- {project['name']}: {project.get('description', 'No description')}" for project in projects]
     )
-    return f"""请基于下面的 GitHub 热门项目列表，写一段面向开发者的“今日热点”总览。
-
-项目列表：
-{project_details}
-
-输出要求：
-1. 严格只输出两行，不要多写。
-2. 第一行必须是 Markdown 二级标题，格式：## 今日热点：<一句话主题判断>
-3. 第二行必须是一整段中文，不要分点，不要换行。
-4. 这段话要回答三个问题：今天真正的技术主线是什么、这些项目为什么值得开发者关注、它们大致覆盖了哪些方向。
-5. 语气要像技术情报编辑的判断，不要写成宣传稿，也不要只是项目名罗列。
-6. 最后一句固定以“具体项目摘要如下：”结尾。
-7. 不要输出任何思考过程、提示词复述、样例、解释或标签。
-"""
+    return render_prompt("overview", project_details=project_details)
 
 
 def build_overview_retry_prompt(projects):
     project_details = "\n".join(
         [f"- {project['name']}: {project.get('description', 'No description')}" for project in projects]
     )
-    return f"""请根据下面的热门项目，输出开发者视角的今日热点总览：
-
-{project_details}
-
-严格只输出两行：
-第一行：## 今日热点：<一句话主题>
-第二行：一句中文判断，说明今天最值得关注的技术趋势，并以“具体项目摘要如下：”结尾。
-不要输出解释、草稿或思考过程。
-"""
+    return render_prompt("overview_retry", project_details=project_details)
 
 
 def build_project_prompt(project):
     readme_content = (project.get("readme_content") or "README content not available.")[:MAX_README_CHARS]
-    return f"""请基于下面的项目信息，生成一份更像“开发者情报”的 GitHub 热点项目分析。
-
-项目元数据：
-- 名称：{project['name']}
-- 链接：{project.get('url', '')}
-- 描述：{project.get('description', 'N/A')}
-- 语言：{project.get('language', 'N/A')}
-- Stars：{project.get('stars', 0)}
-- Forks：{project.get('forks', 0)}
-- Contributor Count：{project.get('contributor_count', 0)}
-- Open Issues：{project.get('open_issues', 0)}
-- Watchers：{project.get('watchers', 0)}
-- Created At：{project.get('created_at', 'N/A')}
-- Updated At：{project.get('updated_at', 'N/A')}
-
-README 素材：
-{readme_content}
-
-请严格输出以下 Markdown 结构，不要多写：
-# {project['name']} - 深度分析报告
-> **一句话总结**：用一句中文说清它是什么、适合谁、为什么值得看
-
-## 热点判断
-- **为什么火**：判断它近期走红的核心原因，是技术突破、产品体验、模型风口、传播效应还是生态位置
-- **值得关注吗**：一句判断它对开发者的实际价值，避免空话
-
-## 问题与价值
-- **解决问题**：它替代了什么旧做法，或者明显改善了哪段工作流
-- **目标用户**：最适合哪类开发者、团队或场景
-- **核心价值**：一句话说明它最打动人的点
-
-## 技术拆解
-- **关键机制**：点出架构、交互方式或实现路径里最值得看的部分
-- **技术取舍**：分析它为了速度、体验、成本、集成度做了什么取舍
-- **核心领域**：只能输出一个固定分类，必须从以下选一个：AI/ML、LLM Apps、Web、Frontend、Mobile、DevOps、Data Science、Database、Tools、Security、Blockchain、Gaming、OS、IoT、Other
-
-## 落地评估
-- **上手门槛**：判断开发者试用它的难度，结合文档、依赖、部署方式来写
-- **生产可用性**：判断它更像 demo、实验品、团队工具，还是可以进入真实流程
-
-## 风险提示
-- **主要风险**：指出维护、生态、模型依赖、许可、性能或安全中的关键风险
-- **需要继续观察**：说出一个后续最值得跟踪的信号
-
-## 结论
-- **建议动作**：只能从“值得立刻试用 / 值得持续跟踪 / 可以先观望”中选一个
-- **判断依据**：用一句话解释为什么给这个建议
-
-## 项目链接
-- **GitHub**：{project.get('url', '')}
-
-写作要求：
-1. 全部使用简体中文。
-2. 语气像技术分析师，不像宣传稿。
-3. 每个要点都要具体，优先写判断和取舍，不要重复 README 原文。
-4. 不要输出思考过程、提示词、样例、前言、后记或代码块围栏。
-"""
+    return render_prompt(
+        "project",
+        name=project["name"],
+        url=project.get("url", ""),
+        description=project.get("description", "N/A"),
+        language=project.get("language", "N/A"),
+        stars=project.get("stars", 0),
+        forks=project.get("forks", 0),
+        contributor_count=project.get("contributor_count", 0),
+        open_issues=project.get("open_issues", 0),
+        watchers=project.get("watchers", 0),
+        created_at=project.get("created_at", "N/A"),
+        updated_at=project.get("updated_at", "N/A"),
+        readme_content=readme_content,
+        tech_domains=tech_domains_for_prompt(),
+    )
 
 
 def build_project_retry_prompt(project):
     readme_content = (project.get("readme_content") or "README content not available.")[:6000]
-    return f"""请基于下面信息，输出一份简洁但有判断的开发者情报。
-
-项目：{project['name']}
-描述：{project.get('description', 'N/A')}
-语言：{project.get('language', 'N/A')}
-Stars：{project.get('stars', 0)}
-Forks：{project.get('forks', 0)}
-链接：{project.get('url', '')}
-README 摘要：
-{readme_content}
-
-严格输出以下 Markdown：
-# {project['name']} - 深度分析报告
-> **一句话总结**：一句话说清它是什么、为什么值得看
-
-## 热点判断
-- **为什么火**：一句话判断热度来源
-- **值得关注吗**：一句话判断开发者是否该关注
-
-## 技术拆解
-- **关键机制**：一句话写出最值得看的实现点
-- **核心领域**：只能从 AI/ML、LLM Apps、Web、Frontend、Mobile、DevOps、Data Science、Database、Tools、Security、Blockchain、Gaming、OS、IoT、Other 中选一个
-
-## 落地评估
-- **适用场景**：一句话说明适合谁
-- **主要风险**：一句话说明最大风险
-
-## 结论
-- **建议动作**：只能从“值得立刻试用 / 值得持续跟踪 / 可以先观望”中选一个
-- **判断依据**：一句话解释原因
-
-## 项目链接
-- **GitHub**：{project.get('url', '')}
-
-不要输出思考过程、解释或多余前后文。
-"""
+    return render_prompt(
+        "project_retry",
+        name=project["name"],
+        url=project.get("url", ""),
+        description=project.get("description", "N/A"),
+        language=project.get("language", "N/A"),
+        stars=project.get("stars", 0),
+        forks=project.get("forks", 0),
+        readme_content=readme_content,
+        tech_domains=tech_domains_for_prompt(),
+    )
 
 
 def build_entity_prompt(owner, entity_details, top_repos, main_languages):
     top_repos_str = "\n".join(
         [f"- {repo['name']} ({repo['stars']} stars, {repo['language']})" for repo in top_repos]
     ) or "- 暂无代表仓库"
-    return f"""请基于下面的 GitHub 开发者 / 组织信息，输出一个极简但有判断的技术画像。
-
-实体信息：
-- 名称：{entity_details.get('name', owner)}
-- 类型：{entity_details.get('type', 'N/A')}
-- 简介：{entity_details.get('bio', 'N/A')}
-- 创建时间：{entity_details.get('created_at', 'N/A')}
-- Followers：{entity_details.get('followers', 0)}
-- Public Repos：{entity_details.get('public_repos', 0)}
-
-代表仓库：
-{top_repos_str}
-
-主要语言：
-{main_languages}
-
-只输出下面三行 Markdown，不要多写：
-**技术影响力**：一句话概括其在技术社区里的位置，说明是头部组织、垂直专家、新兴作者还是热门项目驱动型账号
-**技术栈偏好**：一句话总结其主要技术方向和语言偏好，不要只机械罗列
-**核心领域**：一句话判断其主要聚焦领域，并尽量与其代表项目保持一致
-"""
+    return render_prompt(
+        "entity",
+        entity_name=entity_details.get("name", owner),
+        entity_type=entity_details.get("type", "N/A"),
+        entity_bio=entity_details.get("bio", "N/A"),
+        entity_created_at=entity_details.get("created_at", "N/A"),
+        entity_followers=entity_details.get("followers", 0),
+        entity_public_repos=entity_details.get("public_repos", 0),
+        top_repos_str=top_repos_str,
+        main_languages=main_languages,
+    )
 
 
 def call_llm_with_retry(prompt, model, temperature, max_retries=None, delay=None, system_prompt=None):

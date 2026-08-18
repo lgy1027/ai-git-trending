@@ -110,6 +110,18 @@ class ProjectDatabase:
                     )""")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_ip_rate_limits_lookup ON ip_rate_limits(ip_address, action)")
 
+                # ==================== 收藏表（匿名 client_id 关联）====================
+                # 无登录系统：用 client_id（前端生成的 UUID）作为"用户"标识
+                # 同一 client_id 在多设备/多浏览器间保持收藏一致（只要用户保留 localStorage）
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS favorites (
+                        client_id TEXT NOT NULL,
+                        project_name TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (client_id, project_name)
+                    )""")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_favorites_client_id ON favorites(client_id)")
+
                 conn.commit()
 
                 # 迁移：添加 tech_domain 列（如果不存在）
@@ -248,8 +260,8 @@ class ProjectDatabase:
             safe_int(project.get('stars')),
             safe_int(project.get('forks')),
             safe_int(project.get('contributor_count')),
-            project.get('created_at', 'N/A'),
-            project.get('updated_at', 'N/A'),
+            project.get('created_at') or None,  # 缺失日期落 NULL，不要塞 "N/A"
+            project.get('updated_at') or None,
             safe_int(project.get('open_issues')),
             safe_int(project.get('watchers')),
             today_str,
@@ -333,3 +345,49 @@ class ProjectDatabase:
         except sqlite3.Error as e:
             logger.error(f"❌ Database error (get_all_rate_limits_for_ip): {e}")
             return {}
+
+    # ==================== 收藏操作 ====================
+
+    def add_favorite(self, client_id: str, project_name: str) -> bool:
+        """添加收藏，返回是否新插入（False 表示已存在）"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT OR IGNORE INTO favorites (client_id, project_name) VALUES (?, ?)",
+                    (client_id, project_name),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (add_favorite): {e}")
+            return False
+
+    def remove_favorite(self, client_id: str, project_name: str) -> bool:
+        """移除收藏，返回是否实际删除了记录"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM favorites WHERE client_id = ? AND project_name = ?",
+                    (client_id, project_name),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (remove_favorite): {e}")
+            return False
+
+    def list_favorites(self, client_id: str) -> list[str]:
+        """获取指定 client_id 的所有收藏项目名（按收藏时间倒序）"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT project_name FROM favorites WHERE client_id = ? ORDER BY created_at DESC",
+                    (client_id,),
+                )
+                return [row[0] for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"❌ Database error (list_favorites): {e}")
+            return []

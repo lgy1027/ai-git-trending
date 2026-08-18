@@ -1,6 +1,6 @@
 <template>
   <div class="home-container min-h-screen bg-[#071019] text-slate-100">
-    <!-- 顶部导航栏 - 技术情报终端 -->
+    <!-- 顶部导航栏 -->
     <header class="sticky top-0 z-40 border-b border-cyan-400/10 bg-[#071019]/95 backdrop-blur-sm">
       <div class="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-3 lg:px-6">
         <div class="flex items-center gap-3">
@@ -10,13 +10,13 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND INTEL</h1>
-            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">TECH INTELLIGENCE TERMINAL</p>
+            <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND</h1>
+            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING DAILY</p>
           </div>
         </div>
 
         <nav class="hidden items-center gap-1 md:flex">
-          <router-link to="/" class="terminal-nav active">情报台</router-link>
+          <router-link to="/" class="terminal-nav active">首页</router-link>
           <router-link to="/rankings" class="terminal-nav">排行榜</router-link>
           <router-link to="/trend-analysis" class="terminal-nav">趋势图谱</router-link>
           <router-link to="/favorites" class="terminal-nav">收藏</router-link>
@@ -24,7 +24,7 @@
       </div>
     </header>
 
-    <!-- 情报终端首屏 -->
+    <!-- 首屏 -->
     <section class="terminal-shell border-b border-cyan-400/10">
       <div class="mx-auto grid max-w-[1500px] gap-4 px-4 py-5 lg:grid-cols-[1.45fr_0.95fr] lg:px-6">
         <div class="terminal-panel min-h-[360px]">
@@ -39,27 +39,27 @@
               <span class="status-chip">LLM Report</span>
             </div>
             <h2 class="max-w-4xl text-3xl font-semibold leading-tight text-slate-50 md:text-5xl">
-              技术情报终端
+              GitHub 趋势日报
             </h2>
             <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-400 md:text-base">
-              聚合 GitHub 热门项目、语言热度、技术领域和 AI 分析报告，把每日开源变化整理成可扫描、可追踪、可复盘的情报面板。
+              聚合 GitHub 热门项目、语言热度、技术领域和 AI 分析报告，把每日开源变化整理成可扫描、可追踪、可复盘的日报面板。
             </p>
 
             <div class="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <div class="terminal-metric">
-                <span>REPORTS</span>
+                <span>累计报告</span>
                 <strong>{{ statsData.totalReports }}</strong>
               </div>
               <div class="terminal-metric">
-                <span>PROJECTS</span>
+                <span>累计项目</span>
                 <strong>{{ statsData.totalProjects }}</strong>
               </div>
               <div class="terminal-metric">
-                <span>WEEKLY NEW</span>
+                <span>本周新增</span>
                 <strong>{{ statsData.weeklyNew }}</strong>
               </div>
               <div class="terminal-metric">
-                <span>AVG CONTRIBUTORS</span>
+                <span>平均贡献者</span>
                 <strong>{{ statsData.avgContributors }}</strong>
               </div>
             </div>
@@ -122,8 +122,8 @@
       <section class="mb-12 animate-fadeInUp">
         <div class="terminal-section-title">
           <div>
-            <p class="section-kicker">INTELLIGENCE OVERVIEW</p>
-            <h3>情报概览</h3>
+            <p class="section-kicker">趋势概览</p>
+            <h3>趋势概览</h3>
           </div>
           <button class="terminal-action compact" @click="openTechTrendsModal">
             <i class="fa fa-chart-line mr-1"></i> 打开趋势雷达
@@ -148,7 +148,7 @@
           </div>
           <div class="flex items-center gap-4">
             <div class="relative">
-              <select v-model="timeFilter" class="border border-slate-700 bg-slate-950/70 py-2 pl-3 pr-8 text-sm text-slate-300 outline-none transition-colors hover:border-cyan-400/40">
+              <select v-model="timeFilter" class="appearance-none border border-slate-700 bg-slate-950/70 py-2 pl-3 pr-8 text-sm text-slate-300 outline-none transition-colors hover:border-cyan-400/40">
                 <option value="today">今日</option>
                 <option value="week">本周</option>
                 <option value="month">本月</option>
@@ -233,7 +233,7 @@
     <!-- 页脚 -->
     <footer class="border-t border-cyan-400/10 bg-[#071019]">
       <div class="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 py-6 text-xs text-slate-500 md:flex-row md:items-center md:justify-between lg:px-6">
-        <span>GITTREND INTEL / OPEN SOURCE SIGNAL WATCH</span>
+        <span>GitHub 趋势日报 / 开源信号雷达</span>
         <span>© {{ new Date().getFullYear() }} GitTrend Insights</span>
       </div>
     </footer>
@@ -377,6 +377,17 @@ const topLanguages = computed(() => {
   return []
 })
 
+// 防御性判断：str 是不是一个真日期（不是 "N/A" / null / "" / Invalid Date）
+function toIsoDate(value: unknown): string {
+  if (value === null || value === undefined || value === '') return new Date().toISOString()
+  const date = new Date(value as string)
+  return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
+}
+
+function toDateString(value: unknown): string {
+  return toIsoDate(value).split('T')[0]
+}
+
 // 更新热门趋势项目数据
 function updateTrendingProjects() {
   if (trendsData.value && trendsData.value.most_frequent_projects && trendsData.value.most_frequent_projects.length > 0) {
@@ -389,11 +400,11 @@ function updateTrendingProjects() {
       stars: project.stars || project.avg_stars || 0,
       forks: project.forks || 0,
       contributor_count: project.contributor_count || 0,
-      created_at: project.created_at || new Date().toISOString(),
-      updated_at: project.updated_at || new Date().toISOString(),
+      created_at: toIsoDate(project.created_at),
+      updated_at: toIsoDate(project.updated_at),
       open_issues: project.open_issues || 0,
       watchers: project.watchers || 0,
-      summary_date: project.created_at ? new Date(project.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      summary_date: toDateString(project.created_at)
     }))
   } else {
     // 如果没有真实数据，返回空数组
@@ -401,48 +412,24 @@ function updateTrendingProjects() {
   }
 }
 
-// 计算属性 - 新兴技术领域
+// 计算属性 - 趋势指标（来自 /api/trend-data 的真实计数）
 const emergingAreas = computed(() => {
-  // 只使用从API获取的真实新兴技术领域数据
-  if (trendAreasData.value && trendAreasData.value.length > 0) {
-    // 为不同的技术领域分配图标和背景色
-    const techIcons = ['IconEcosystem', 'IconTooling', 'IconCommunity', 'IconDocumentation']
-    const bgClasses = ['bg-purple-500/20', 'bg-blue-500/20', 'bg-green-500/20', 'bg-pink-500/20']
-    
-    // 进一步映射到相应的days参数
-    const areaNameMap: Record<string, string> = {
-      '新项目': '生成式AI',
-      '活跃项目': 'WebAssembly',
-      '热门项目': '边缘计算',
-      '趋势项目': '低代码平台'
-    }
-    
-    return trendAreasData.value.slice(0, 4).map((item, index) => ({
-      name: areaNameMap[item.label] || item.label,
-      growth: item.change,
-      bgClass: bgClasses[index % bgClasses.length],
-      icon: techIcons[index % techIcons.length]
-    }))
-  }
-  
-  // 如果没有真实数据，返回空数组
-  return []
+  if (!trendAreasData.value || trendAreasData.value.length === 0) return []
+  const techIcons = ['IconEcosystem', 'IconTooling', 'IconCommunity', 'IconDocumentation']
+  const bgClasses = ['bg-purple-500/20', 'bg-blue-500/20', 'bg-green-500/20', 'bg-pink-500/20']
+  return trendAreasData.value.slice(0, 4).map((item, index) => ({
+    name: item.label,
+    growth: item.change,
+    bgClass: bgClasses[index % bgClasses.length],
+    icon: techIcons[index % techIcons.length]
+  }))
 })
 
-// 计算属性 - 上升最快项目
+// 计算属性 - 上升最快项目（仅展示真实飙升数据）
 const surgingProjects = computed(() => {
-  if (trendsData.value && trendsData.value.surgingProjects && trendsData.value.surgingProjects.length > 0) {
-    return trendsData.value.surgingProjects.slice(0, 4).map((project, index) => ({
-      ...project,
-      rank: index + 1
-    }))
-  }
-
-  return trendingProjects.value.slice(0, 4).map((project, index) => ({
-    name: project.name,
-    description: project.description,
-    language: project.language,
-    star_increase: project.stars,
+  if (!trendsData.value?.surgingProjects?.length) return []
+  return trendsData.value.surgingProjects.slice(0, 4).map((project, index) => ({
+    ...project,
     rank: index + 1
   }))
 })
