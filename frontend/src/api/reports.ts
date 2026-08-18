@@ -345,6 +345,30 @@ export const reportApi = {
       return false
     }
   },
+
+  async listFavorites(clientId: string): Promise<{ items: Project[]; total: number }> {
+    const response = await api.get<ApiEnvelope<{ items: Project[]; total: number }>>(
+      '/api/favorites',
+      { params: { client_id: clientId } },
+    )
+    return unwrap(response.data)
+  },
+
+  async addFavorite(clientId: string, projectName: string): Promise<boolean> {
+    const response = await api.post<ApiEnvelope<{ added: boolean }>>(
+      '/api/favorites',
+      { client_id: clientId, project_name: projectName },
+    )
+    return unwrap(response.data).added
+  },
+
+  async removeFavorite(clientId: string, projectName: string): Promise<boolean> {
+    const response = await api.delete<ApiEnvelope<{ removed: boolean }>>(
+      '/api/favorites',
+      { data: { client_id: clientId, project_name: projectName } },
+    )
+    return unwrap(response.data).removed
+  },
 }
 
 export const getReports = reportApi.getReports
@@ -363,6 +387,9 @@ export const getTrendData = reportApi.getTrendData
 export const getTechDomains = reportApi.getTechDomains
 export const getProjectTrend = reportApi.getProjectTrend
 export const healthCheck = reportApi.healthCheck
+export const listFavorites = reportApi.listFavorites
+export const addFavorite = reportApi.addFavorite
+export const removeFavorite = reportApi.removeFavorite
 export const getApiBaseUrl = () => API_BASE_URL
 
 export default api

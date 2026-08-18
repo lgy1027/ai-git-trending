@@ -11,7 +11,7 @@
           </div>
           <div>
             <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND</h1>
-            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING DAILY</p>
+            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING ANALYSIS</p>
           </div>
         </div>
 

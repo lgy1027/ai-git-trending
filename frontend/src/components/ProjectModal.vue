@@ -28,6 +28,35 @@
               </svg>
               在 GitHub 查看
             </a>
+            <button
+              type="button"
+              class="modal-favorite-btn ml-2 w-9 h-9 flex items-center justify-center rounded-full border transition-colors flex-shrink-0"
+              :class="favorited ? 'is-favorite' : ''"
+              :title="favorited ? '取消收藏' : '加入收藏'"
+              :aria-label="favorited ? '取消收藏' : '加入收藏'"
+              :aria-pressed="favorited"
+              :disabled="!project"
+              @click="onToggleFavorite"
+            >
+              <svg
+                v-if="favorited"
+                class="w-4 h-4 text-rose-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <svg
+                v-else
+                class="w-4 h-4 text-slate-300"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
           </div>
           <button
             @click="$emit('close')"
@@ -213,6 +242,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Project } from '@/api/reports'
 import { getProjectAnalysis, getProjectDetails } from '@/api/reports'
+import { useFavorites } from '@/composables/useFavorites'
 import { enhanceMarkdownDisplay, renderMarkdown } from '@/utils/markdown-simple'
 
 interface Props {
@@ -239,6 +269,19 @@ const analysisHasContent = ref(false)
 const analysisError = ref('')
 const renderedAnalysis = ref('')
 
+// 收藏
+const { isFavorite, toggleFavorite, ensureLoaded } = useFavorites()
+const favorited = computed(() => (props.projectName ? isFavorite(props.projectName) : false))
+
+async function onToggleFavorite() {
+  if (!project.value) return
+  try {
+    await toggleFavorite(project.value)
+  } catch (e) {
+    console.error('toggle favorite failed', e)
+  }
+}
+
 const projectDisplayName = computed(() => {
   if (!props.projectName) return ''
   const parts = props.projectName.split('/')
@@ -249,6 +292,8 @@ watch(() => props.visible, async (visible) => {
   if (visible && props.projectName) {
     resetAnalysisState()
     await loadProjectDetails()
+    // 触发一次加载，确保 modal 内的心形状态正确
+    ensureLoaded().catch(() => {})
   }
 })
 
@@ -500,5 +545,25 @@ const getLanguageClass = (language: string): string => {
 
 .markdown-content :deep(td) {
   @apply px-3 py-2 border border-slate-700;
+}
+
+.modal-favorite-btn {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.modal-favorite-btn:hover:not(:disabled) {
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.modal-favorite-btn.is-favorite {
+  border-color: rgba(244, 63, 94, 0.5);
+  background: rgba(244, 63, 94, 0.12);
+}
+
+.modal-favorite-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

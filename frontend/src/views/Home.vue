@@ -11,7 +11,7 @@
           </div>
           <div>
             <h1 class="text-sm font-semibold tracking-[0.28em] text-slate-100">GITTREND</h1>
-            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING DAILY</p>
+            <p class="text-[10px] uppercase tracking-[0.26em] text-cyan-400/70">GITHUB TRENDING ANALYSIS</p>
           </div>
         </div>
 
@@ -39,7 +39,7 @@
               <span class="status-chip">LLM Report</span>
             </div>
             <h2 class="max-w-4xl text-3xl font-semibold leading-tight text-slate-50 md:text-5xl">
-              GitHub 趋势日报
+              GitHub 趋势分析
             </h2>
             <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-400 md:text-base">
               聚合 GitHub 热门项目、语言热度、技术领域和 AI 分析报告，把每日开源变化整理成可扫描、可追踪、可复盘的日报面板。
@@ -233,7 +233,7 @@
     <!-- 页脚 -->
     <footer class="border-t border-cyan-400/10 bg-[#071019]">
       <div class="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 py-6 text-xs text-slate-500 md:flex-row md:items-center md:justify-between lg:px-6">
-        <span>GitHub 趋势日报 / 开源信号雷达</span>
+        <span>GitHub 趋势分析 · 多周期聚合</span>
         <span>© {{ new Date().getFullYear() }} GitTrend Insights</span>
       </div>
     </footer>
