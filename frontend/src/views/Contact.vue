@@ -21,7 +21,7 @@
           <router-link to="/trend-analysis" class="terminal-nav">趋势图谱</router-link>
           <router-link to="/favorites" class="terminal-nav">收藏</router-link>
           <span class="mx-2 hidden h-4 w-px bg-slate-800 md:inline-block"></span>
-          <router-link to="/contact" class="terminal-nav active">联系我们</router-link>
+          <ContactNavLink :active="true" />
         </nav>
       </div>
     </header>
@@ -111,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-// 联系我们页面 - 静态展示
+import ContactNavLink from '@/components/ContactNavLink.vue'
 </script>
 
 <style scoped>

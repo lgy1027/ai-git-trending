@@ -21,7 +21,7 @@
           <router-link to="/trend-analysis" class="terminal-nav">趋势图谱</router-link>
           <router-link to="/favorites" class="terminal-nav">收藏</router-link>
           <span class="mx-2 hidden h-4 w-px bg-slate-800 md:inline-block"></span>
-          <router-link to="/contact" class="terminal-nav">联系我们</router-link>
+          <ContactNavLink />
         </nav>
       </div>
     </header>
@@ -184,6 +184,7 @@
 import { ref, onMounted } from 'vue'
 import { reportApi, type Report } from '../api/reports'
 import { renderMarkdown } from '../utils/markdown-simple'
+import ContactNavLink from '@/components/ContactNavLink.vue'
 
 const reports = ref<Report[]>([])
 const filteredReports = ref<Report[]>([])

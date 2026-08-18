@@ -21,7 +21,7 @@
           <router-link to="/trend-analysis" class="terminal-nav active">趋势图谱</router-link>
           <router-link to="/favorites" class="terminal-nav">收藏</router-link>
           <span class="mx-2 hidden h-4 w-px bg-slate-800 md:inline-block"></span>
-          <router-link to="/contact" class="terminal-nav">联系我们</router-link>
+          <ContactNavLink />
         </nav>
       </div>
     </header>
@@ -130,6 +130,7 @@ import { ref, onMounted, watch, nextTick } from 'vue'
 import { getProjectsByDate, getLanguageDistribution, getTechDomains, getProjectTrend, type Project } from '@/api/reports'
 import ProjectCard from '@/components/ProjectCard.vue'
 import ProjectModal from '@/components/ProjectModal.vue'
+import ContactNavLink from '@/components/ContactNavLink.vue'
 import Chart from 'chart.js/auto'
 
 const loading = ref(false)
