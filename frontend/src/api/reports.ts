@@ -296,6 +296,15 @@ export const reportApi = {
     return unwrap(response.data)
   },
 
+  async getProjectAnalysis(
+    projectName: string,
+  ): Promise<{ project_name: string; summary_date: string | null; content: string; has_analysis: boolean }> {
+    const response = await api.get<
+      ApiEnvelope<{ project_name: string; summary_date: string | null; content: string; has_analysis: boolean }>
+    >(`/api/project/${encodeURIComponent(projectName)}/analysis`)
+    return unwrap(response.data)
+  },
+
   async getStats(): Promise<Stats> {
     const response = await api.get<ApiEnvelope<Stats>>('/api/stats')
     return unwrap(response.data)
@@ -346,6 +355,7 @@ export const getRateLimitStatus = reportApi.getRateLimitStatus
 export const getProjectsByDate = reportApi.getProjectsByDate
 export const getProjects = reportApi.getProjects
 export const getProjectDetails = reportApi.getProjectDetails
+export const getProjectAnalysis = reportApi.getProjectAnalysis
 export const getStats = reportApi.getStats
 export const getTrends = reportApi.getTrends
 export const getLanguageDistribution = reportApi.getLanguageDistribution

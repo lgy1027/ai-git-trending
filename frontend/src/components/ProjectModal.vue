@@ -5,9 +5,9 @@
       class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
       @click="handleBackdropClick"
     >
-      <div 
+      <div
         ref="modalContent"
-        class="bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn"
+        class="bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn"
         @click.stop
       >
         <!-- 模态框头部 -->
@@ -29,8 +29,8 @@
               在 GitHub 查看
             </a>
           </div>
-          <button 
-            @click="$emit('close')" 
+          <button
+            @click="$emit('close')"
             class="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ml-4"
           >
             <i class="fa fa-times text-xl text-slate-400"></i>
@@ -132,6 +132,52 @@
                 </div>
               </div>
             </div>
+
+            <!-- AI 深度分析 -->
+            <div class="mb-6">
+              <button
+                @click="toggleAnalysis"
+                :class="['analysis-toggle w-full', analysisExpanded ? 'expanded' : '']"
+                :disabled="analysisLoading"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <i class="fa fa-robot text-primary mr-2"></i>
+                    <span class="text-lg font-semibold text-white">AI 深度分析</span>
+                    <span v-if="analysisLoaded && !analysisHasContent" class="ml-3 text-xs text-slate-400">
+                      暂无分析报告
+                    </span>
+                  </div>
+                  <i
+                    :class="['fa text-slate-400 transition-transform duration-300', analysisExpanded ? 'fa-chevron-up' : 'fa-chevron-down']"
+                  ></i>
+                </div>
+              </button>
+
+              <div v-if="analysisExpanded" class="mt-4">
+                <div v-if="analysisLoading" class="flex flex-col items-center justify-center py-8">
+                  <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+                  <p class="text-slate-400 text-sm">正在加载分析报告...</p>
+                </div>
+
+                <div v-else-if="analysisError" class="text-center py-6">
+                  <i class="fa fa-exclamation-circle text-red-400 text-2xl mb-2"></i>
+                  <p class="text-slate-400 text-sm">{{ analysisError }}</p>
+                </div>
+
+                <div
+                  v-else-if="analysisHasContent"
+                  ref="analysisContainer"
+                  class="markdown-content prose prose-invert max-w-none border border-slate-700 bg-slate-900/50 p-4 rounded-lg text-sm"
+                  v-html="renderedAnalysis"
+                ></div>
+
+                <div v-else class="text-center py-6 text-slate-500 text-sm">
+                  <i class="fa fa-file-text-o text-2xl mb-2 block"></i>
+                  该项目暂无 AI 分析报告
+                </div>
+              </div>
+            </div>
           </div>
 
           <div v-else class="h-full flex flex-col items-center justify-center py-12">
@@ -164,9 +210,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { Project } from '@/api/reports'
-import { getProjectDetails } from '@/api/reports'
+import { getProjectAnalysis, getProjectDetails } from '@/api/reports'
+import { enhanceMarkdownDisplay, renderMarkdown } from '@/utils/markdown-simple'
 
 interface Props {
   visible: boolean
@@ -180,8 +227,17 @@ const emit = defineEmits<{
 }>()
 
 const modalContent = ref<HTMLElement>()
+const analysisContainer = ref<HTMLElement>()
 const loading = ref(false)
 const project = ref<Project | null>(null)
+
+// AI 分析区域状态
+const analysisExpanded = ref(false)
+const analysisLoading = ref(false)
+const analysisLoaded = ref(false)
+const analysisHasContent = ref(false)
+const analysisError = ref('')
+const renderedAnalysis = ref('')
 
 const projectDisplayName = computed(() => {
   if (!props.projectName) return ''
@@ -191,13 +247,19 @@ const projectDisplayName = computed(() => {
 
 watch(() => props.visible, async (visible) => {
   if (visible && props.projectName) {
+    resetAnalysisState()
     await loadProjectDetails()
   }
 })
 
+// 监听项目名变化，重置分析状态
+watch(() => props.projectName, () => {
+  resetAnalysisState()
+})
+
 const loadProjectDetails = async () => {
   if (!props.projectName) return
-  
+
   loading.value = true
   try {
     // 修改为使用查询参数，而不是路径参数，以更好地处理包含特殊字符的项目名称
@@ -207,6 +269,48 @@ const loadProjectDetails = async () => {
     project.value = null
   } finally {
     loading.value = false
+  }
+}
+
+function resetAnalysisState() {
+  analysisExpanded.value = false
+  analysisLoading.value = false
+  analysisLoaded.value = false
+  analysisHasContent.value = false
+  analysisError.value = ''
+  renderedAnalysis.value = ''
+}
+
+async function toggleAnalysis() {
+  if (analysisLoading.value) return
+  analysisExpanded.value = !analysisExpanded.value
+  // 首次展开时按需加载
+  if (analysisExpanded.value && !analysisLoaded.value) {
+    await loadAnalysis()
+  }
+}
+
+async function loadAnalysis() {
+  if (!props.projectName) return
+  analysisLoading.value = true
+  analysisError.value = ''
+  try {
+    const result = await getProjectAnalysis(props.projectName)
+    analysisHasContent.value = result.has_analysis
+    if (result.has_analysis) {
+      renderedAnalysis.value = await renderMarkdown(result.content)
+      await nextTick()
+      if (analysisContainer.value) {
+        enhanceMarkdownDisplay(analysisContainer.value)
+      }
+    }
+    analysisLoaded.value = true
+  } catch (error) {
+    console.error('加载 AI 分析失败:', error)
+    analysisError.value = error instanceof Error ? error.message : '加载失败，请重试'
+    analysisLoaded.value = true
+  } finally {
+    analysisLoading.value = false
   }
 }
 
@@ -300,5 +404,101 @@ const getLanguageClass = (language: string): string => {
 
 .stat-label {
   @apply text-slate-400 text-xs;
+}
+
+.analysis-toggle {
+  @apply bg-slate-900/50 hover:bg-slate-900/70 border border-slate-700/80 rounded-lg px-4 py-3 transition-colors duration-300;
+}
+
+.analysis-toggle:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.analysis-toggle.expanded {
+  @apply border-primary/40 bg-slate-900/80;
+}
+
+.analysis-toggle:focus {
+  @apply outline-none ring-2 ring-primary/30;
+}
+
+.analysis-toggle:focus:not(:focus-visible) {
+  @apply ring-0;
+}
+
+.analysis-toggle :deep(.fa-chevron-up) {
+  transform: translateY(0);
+}
+
+.analysis-toggle :deep(.fa-chevron-down) {
+  transform: translateY(0);
+}
+
+.markdown-content :deep(h1) {
+  @apply text-xl font-semibold text-slate-100 border-b border-slate-700 pb-2 mb-3;
+}
+
+.markdown-content :deep(h2) {
+  @apply text-base font-semibold text-slate-200 mt-5 mb-3;
+}
+
+.markdown-content :deep(h3) {
+  @apply text-sm font-semibold text-slate-200 mt-4 mb-2;
+}
+
+.markdown-content :deep(p) {
+  @apply text-slate-300 leading-relaxed my-2;
+}
+
+.markdown-content :deep(ul) {
+  @apply list-disc list-inside text-slate-300 my-2 space-y-1;
+}
+
+.markdown-content :deep(ol) {
+  @apply list-decimal list-inside text-slate-300 my-2 space-y-1;
+}
+
+.markdown-content :deep(li) {
+  @apply text-slate-300;
+}
+
+.markdown-content :deep(blockquote) {
+  @apply border-l-4 border-primary/50 bg-slate-900/60 px-4 py-2 my-3 text-slate-300 italic rounded-r;
+}
+
+.markdown-content :deep(strong) {
+  @apply text-slate-100 font-semibold;
+}
+
+.markdown-content :deep(a) {
+  @apply text-primary hover:text-primary/80 underline;
+}
+
+.markdown-content :deep(code) {
+  @apply bg-slate-800 text-cyan-300 px-1.5 py-0.5 rounded text-xs;
+}
+
+.markdown-content :deep(pre) {
+  @apply bg-slate-950 border border-slate-800 rounded p-3 overflow-x-auto my-3;
+}
+
+.markdown-content :deep(pre code) {
+  @apply bg-transparent text-slate-200 p-0;
+}
+
+.markdown-content :deep(hr) {
+  @apply border-slate-700 my-4;
+}
+
+.markdown-content :deep(table) {
+  @apply w-full border-collapse my-3 text-slate-300;
+}
+
+.markdown-content :deep(th) {
+  @apply bg-slate-800 text-slate-100 px-3 py-2 border border-slate-700 text-left;
+}
+
+.markdown-content :deep(td) {
+  @apply px-3 py-2 border border-slate-700;
 }
 </style>

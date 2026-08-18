@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 import urllib.parse
 
 from flask import Blueprint, request
@@ -9,6 +11,7 @@ from flask import Blueprint, request
 from app.database import ProjectDatabase
 from app.response import ErrorCode, error_response, get_pagination_params, paginate_response, success_response
 from config.logging_config import get_logger
+from config.settings import MD_DIR
 from routes.common import find_project_details, validate_date_string, validate_project_name
 
 projects_bp = Blueprint("projects", __name__)
@@ -21,6 +24,38 @@ def decode_uri_component(value: str) -> str:
         return urllib.parse.unquote(value)
     except Exception:
         return value
+
+
+# 报告主标题行：`# owner/repo - 深度分析报告`
+PROJECT_HEADING_RE = re.compile(r"^#\s+([\w.-]+/[\w.-]+)\s+-\s+深度分析报告\s*$")
+
+
+def slice_project_analysis(content: str, project_name: str) -> str:
+    """从单日完整报告的 Markdown 内容中切出单个项目段落。
+
+    段落以 `# owner/repo - 深度分析报告` 开头，到下一个 `---` 分隔符前结束。
+    """
+    if not content:
+        return ""
+
+    lines = content.splitlines()
+    start_idx: int | None = None
+    for index, line in enumerate(lines):
+        match = PROJECT_HEADING_RE.match(line.strip())
+        if match and match.group(1) == project_name:
+            start_idx = index
+            break
+
+    if start_idx is None:
+        return ""
+
+    end_idx = len(lines)
+    for index in range(start_idx + 1, len(lines)):
+        if lines[index].strip() == "---":
+            end_idx = index
+            break
+
+    return "\n".join(lines[start_idx:end_idx]).strip()
 
 
 @projects_bp.route("/project/<project_name>")
@@ -38,6 +73,59 @@ def get_project_details(project_name: str):
     except Exception as exc:
         logger.error("Failed to load project %s: %s", decoded_project_name, exc)
         return error_response(ErrorCode.INTERNAL_ERROR, "Failed to retrieve project details", 500)
+
+
+@projects_bp.route("/project/<path:project_name>/analysis")
+def get_project_analysis(project_name: str):
+    """返回单个项目的 AI 深度分析切片（从当日 .md 报告中按标题切出）。"""
+    decoded_project_name = decode_uri_component(project_name)
+    is_valid, error_message = validate_project_name(decoded_project_name)
+    if not is_valid:
+        return error_response(ErrorCode.VALIDATION_ERROR, error_message, 400)
+
+    try:
+        # 1. 先从数据库查到该项目的最后分析日期
+        with db._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT summary_date FROM summarized_projects WHERE name = ? LIMIT 1",
+                (decoded_project_name,),
+            )
+            row = cursor.fetchone()
+        summary_date = row[0] if row else None
+
+        if not summary_date:
+            return success_response({
+                "project_name": decoded_project_name,
+                "summary_date": None,
+                "content": "",
+                "has_analysis": False,
+            })
+
+        # 2. 读取对应日期的 .md 报告
+        md_path = os.path.join(MD_DIR, f"github_trending_{summary_date}.md")
+        if not os.path.exists(md_path):
+            return success_response({
+                "project_name": decoded_project_name,
+                "summary_date": summary_date,
+                "content": "",
+                "has_analysis": False,
+            })
+
+        with open(md_path, "r", encoding="utf-8") as handle:
+            full_content = handle.read()
+
+        # 3. 按项目标题切片
+        section = slice_project_analysis(full_content, decoded_project_name)
+        return success_response({
+            "project_name": decoded_project_name,
+            "summary_date": summary_date,
+            "content": section,
+            "has_analysis": bool(section),
+        })
+    except Exception as exc:
+        logger.error("Failed to slice project analysis %s: %s", decoded_project_name, exc)
+        return error_response(ErrorCode.INTERNAL_ERROR, "Failed to retrieve project analysis", 500)
 
 
 @projects_bp.route("/project", methods=["GET", "POST"])
