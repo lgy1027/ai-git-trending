@@ -58,6 +58,14 @@ const routes = [
     meta: {
       title: '报告列表 - GitTrend Insights'
     }
+  },
+  {
+    path: '/contact',
+    name: 'Contact',
+    component: () => import('../views/Contact.vue'),
+    meta: {
+      title: '联系我们 - GitTrend Insights'
+    }
   }
 ]
 
