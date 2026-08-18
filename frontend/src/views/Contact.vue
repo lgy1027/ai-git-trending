@@ -99,10 +99,6 @@
                 </div>
               </a>
             </div>
-
-            <p class="mt-8 text-xs text-slate-500">
-              提示：替换 <code class="bg-slate-800 px-1.5 py-0.5 rounded text-cyan-300">images/wechat.png</code> 即可更新实际二维码。
-            </p>
           </div>
         </section>
       </div>
