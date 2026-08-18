@@ -8,7 +8,7 @@
     </router-link>
     <div v-if="showQr" class="contact-qr-popup">
       <img
-        src="/images/wechat.png"
+        :src="qrSrc"
         alt="WeChat QR Code"
         width="240"
         height="253"
@@ -23,6 +23,10 @@
 </template>
 
 <script setup lang="ts">
+// 用 JS 字符串绑定 src，避免 Vite 把 /images/wechat.png 当作静态资源
+// 走 import-analysis 解析失败（dev 模式下 /images 由 Vite proxy 转给后端 Flask）
+const qrSrc = '/images/wechat.png'
+
 withDefaults(
   defineProps<{
     to?: string

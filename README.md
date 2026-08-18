@@ -1,170 +1,105 @@
-# GitHub Trending Reporter 🚀
+# GitHub Trending Reporter
 
-[English](./README-EN.md) | 简体中文
+> 每天自动抓取 GitHub Trending，用 LLM 深度分析，生成结构化技术洞察报告。
 
-**一个自动化分析 GitHub Trending 的机器人，为您每日精选、总结并生成技术洞察报告。**
+[English](./README-EN.md) · 简体中文
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Version](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
-[![Framework](https://img.shields.io/badge/Backend-Flask-green.svg)](https://flask.palletsprojects.com/)
-[![Framework](https://img.shields.io/badge/Frontend-Vue.js-blue.svg)](https://vuejs.org/)
-[![Docker Support](https://img.shields.io/badge/Docker-Supported-blue.svg)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/github/license/lgy1027/ai-git-trending)](LICENSE)
+[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
+[![Vue 3](https://img.shields.io/badge/vue-3-brightgreen.svg)](https://vuejs.org/)
+[![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
+[![GitHub stars](https://img.shields.io/github/stars/lgy1027/ai-git-trending)](https://github.com/lgy1027/ai-git-trending/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/lgy1027/ai-git-trending)](https://github.com/lgy1027/ai-git-trending/network)
 
----
+每天 09:00（可配）自动抓取 GitHub Trending 热门项目，用大模型生成「一句话点评 / 技术亮点 / 潜在影响」三段式分析，沉淀到 SQLite 并产出 Markdown / HTML 报告，同时提供交互式 Web 看板用于浏览历史趋势、收藏感兴趣的项目。
 
-## ✨ 项目亮点
+![首页概览](images/web.png)
+![项目介绍](images/card.png)
+![分析报告](images/report.png)
 
-- **📈 每日追踪与分析**: 自动抓取 GitHub Trending 的最新热门项目，并利用大语言模型（LLM）进行深度分析，产出"一句话点评"、"技术亮点"和"潜在影响"等洞察。
-- **🌐 交互式 Web 界面**: 基于 Vue.js 构建的现代化前端，提供美观的报告浏览、搜索和筛选功能，支持响应式设计。
-- **🚀 多维度数据分析**: 内置趋势分析看板，可查看"上榜最频繁项目"、"热门语言分布"、"星标蹿升最快项目"和"技术领域分析"，助您全面洞察技术潮流。
-- **⚙️ 灵活高度可配**: 从 LLM 模型、API 地址到抓取频率、报告数量，几乎所有核心参数均可通过环境变量轻松配置。
-- **📦 开箱即用**: 提供 Docker 支持，一键启动，无需繁琐的环境配置；同时支持多种运行模式（完整服务、仅Web、仅报告生成器）。
-- **💾 数据持久化**: 使用 SQLite 数据库存储历史数据，避免重复分析，并支持趋势分析功能。
 
-## 📊 输出示例
+## 目录
 
-项目会在 `output` 目录生成每日报告。
+- [功能特性](#-功能特性)
+- [快速开始](#-快速开始)
+- [Docker 部署](#-docker-部署)
+- [配置项](#-配置项)
+- [运行模式](#-运行模式)
+- [API 参考](#-api-参考)
+- [测试](#-测试)
+- [路线图](#-路线图)
+- [贡献](#-贡献)
+- [许可证](#-许可证)
+- [联系我们](#-联系我们)
 
-### Markdown 报告 (`.md`)
+## ✨ 功能特性
 
-结构清晰的 Markdown 文件，可直接发布到各类平台。
+### 🤖 自动化流水线
+- 每天定时抓取 GitHub Trending（daily / weekly / monthly 可选）
+- 自动调用 LLM 生成「一句话点评、技术亮点、潜在影响」三段式分析
+- 输出 Markdown / HTML 双格式报告，结构清晰，可直接复制到公众号、博客
 
-```markdown
-## 🚀 AI 浪潮继续席卷，今天 GitHub 上有几款颠覆性的开源模型！
+### 📊 交互式 Web 看板
+- Vue 3 + TypeScript + Tailwind 实现的暗色科技风界面
+- 排行榜、趋势图谱、技术领域分类等多维度可视化
+- 每天自动检查后端健康（角标在线状态）
+- 收藏感兴趣的项目（基于 localStorage + 匿名 client_id，无需登录）
 
-### ✨ awesome-project
+### 🔍 深度分析
+- 每个项目点击进入详情后，可展开 LLM 生成的完整深度分析报告
+- 自动从当日 Markdown 报告切片，避免读完整份日报
 
-**一句话点评**: 解决 X 领域痛点的革命性工具。
-**💡 技术亮点与创新**: 采用最新的 A 技术和 B 框架，特别巧妙的 C 设计模式。
-**📈 潜在影响与应用**: 有望在 Y 行业树立新标准，特别适合 X、Y、Z 场景。
-**🔗 项目链接**: [awesome-project](https://github.com/user/awesome-project)
+### ⚙️ 高度可配置
+- LLM 模型、API 端点、抓取周期、分析数量、抓取数量都从环境变量读取
+- 支持任意兼容 OpenAI 协议的服务（OpenAI / DeepSeek / 通义千问 / 自部署）
 
----
-
-### ✨ another-cool-repo
-
-**一句话点评**: ...
-...
-```
-
-![Markdown 示例](images/image.png)
-
-### 交互式 Web 界面
-
-现代化卡片式设计的 HTML 文件，提供更好的视觉阅读体验。
-
-![Web 界面示例](images/web.png)
-
-## 🛠️ 技术栈
-
-- **后端**: Python 3.x, Flask
-- **前端**: Vue.js 3, TypeScript, Vite, Pinia, TailwindCSS
-- **数据抓取**: `requests`, `BeautifulSoup4`
-- **AI 集成**: `openai`
-- **任务调度**: `schedule`
-- **数据库**: `SQLite`
-- **部署**: `Docker`
-
-## 📁 项目结构
-
-项目采用前后端分离的架构设计：
-
-```
-├── backend/           # 后端代码目录
-│   ├── app.py         # 主程序入口（支持三种运行模式）
-│   ├── router.py      # API 路由定义
-│   ├── config/        # 配置模块
-│   │   ├── settings.py      # 环境变量配置
-│   │   └── logging_config.py
-│   ├── app/           # 核心功能模块
-│   │   ├── analyzer.py      # 数据分析功能
-│   │   ├── summarizer.py    # AI 总结生成
-│   │   ├── scraper.py       # GitHub 数据抓取
-│   │   ├── database.py      # 数据库操作
-│   │   ├── github_api.py    # GitHub API 调用
-│   │   ├── file_writer.py   # 报告文件输出
-│   │   ├── cache.py         # IP 限流实现
-│   │   └── main.py          # 任务执行入口
-│   └── routes/        # 蓝图路由模块
-│       ├── projects.py      # 项目相关 API
-│       ├── stats.py         # 统计相关 API
-│       └── common.py        # 通用 API
-├── frontend/          # 前端代码目录
-│   ├── src/           # Vue.js 源码
-│   │   ├── views/           # 页面视图
-│   │   ├── components/      # 可复用组件
-│   │   ├── api/             # API 调用封装
-│   │   ├── stores/          # Pinia 状态管理
-│   │   ├── composables/     # Vue 组合式函数
-│   │   └── router/          # Vue Router 配置
-│   └── package.json   # 前端依赖配置
-└── README.md          # 项目说明文档
-```
+### 🐳 一键部署
+- 提供 Docker Compose 配置，clone 后两条命令即可启动
+- 多种运行模式：完整服务 / 仅 Web / 仅后台 Reporter
 
 ## 🚀 快速开始
 
-### 1. 环境准备
+### 前置条件
+
+- Python 3.9+
+- Node.js 18+
+- 一个兼容 OpenAI 协议的 LLM 服务（API Key + Base URL）
+
+### 1. 克隆项目
 
 ```bash
-git clone https://github.com/lgy1027/ai-trending.git
-cd ai-trending
+git clone https://github.com/lgy1027/ai-git-trending.git
+cd ai-git-trending
 ```
 
 ### 2. 配置环境变量
 
-复制后端和前端的 `.env.example` 文件为 `.env`，并填入您的 LLM 服务凭证：
-
 ```bash
-# 后端配置
 cp backend/.env.example backend/.env
-
-# 前端配置
 cp frontend/.env.example frontend/.env
 ```
 
-编辑 `backend/.env` 文件：
+编辑 `backend/.env`，至少填入：
 
 ```env
-# .env
-LLM_API_KEY="your_api_key"
+LLM_API_KEY="sk-your_api_key_here"
 LLM_BASE_URL="https://api.openai.com/v1"
 LLM_MODEL="gpt-4-turbo"
 ```
 
-### 3. 运行项目
+`frontend/.env` 一般无需修改（默认指向本地后端）。
 
-#### 方式一：使用 Docker（推荐）
-
-```bash
-docker compose up
-```
-
-#### 方式二：本地运行
-
-安装后端依赖：
+### 3. 启动后端
 
 ```bash
 cd backend
 pip install -r requirements.txt
+python app.py --mode web --port 5001 --debug
 ```
 
-启动后端服务：
+后端将在 `http://127.0.0.1:5001` 启动。
 
-```bash
-# 运行完整服务（Web API + 定时任务）- 推荐
-python app.py
-
-# 仅运行 Web API 服务（用于前端开发）
-python app.py --mode web --debug
-
-# 仅运行定时报告生成器
-python app.py --mode reporter
-
-# 自定义端口和地址
-python app.py --host 0.0.0.0 --port 5001 --debug
-```
-
-安装并启动前端（如需前端界面）：
+### 4. 启动前端（可选，新终端）
 
 ```bash
 cd frontend
@@ -172,52 +107,140 @@ npm install
 npm run dev
 ```
 
-访问地址：
+前端将在 `http://localhost:5173` 启动，Vite 会自动代理 `/api` 和 `/images` 请求到后端。
 
-- **后端 API**: `http://127.0.0.1:5001`
-- **前端界面**: `http://127.0.0.1:5173`
+打开浏览器访问 `http://localhost:5173`，把鼠标放到顶部「联系我们」上就能看到微信二维码。
 
-## ⚙️ 详细配置
+## 🐳 Docker 部署
 
-### 环境变量 (`.env`)
+最快的方式，适合生产 / 持续运行：
 
-| 变量 | 必填 | 默认值 | 说明 |
-|------|------|--------|------|
-| `LLM_API_KEY` | ✅ | - | 大语言模型服务的 API Key |
-| `LLM_BASE_URL` | ✅ | - | 大语言模型服务的基础 URL |
-| `LLM_MODEL` | ❌ | `gpt-4-turbo` | 使用的模型 |
-| `GITHUB_API_TOKEN` | ❌ | - | GitHub API Token（可选，获取更详细项目信息） |
-| `SCHEDULE_TIME` | ❌ | `09:00` | 每日任务执行时间 (HH:MM) |
-| `NUM_PROJECTS_TO_SUMMARIZE` | ❌ | `8` | 每日需要分析的新项目数量 |
-| `MAX_PROJECTS_TO_SCRAPE` | ❌ | `25` | 从 Trending 列表中筛选的项目总数 |
-| `TRENDING_DATE_RANGE` | ❌ | `daily` | 抓取时间范围：`daily`/`weekly`/`monthly` |
+```bash
+# 1. 配 .env（同上）
+cp backend/.env.example backend/.env
+# 编辑 backend/.env 填 LLM_API_KEY 等
 
-### 运行模式
+# 2. 一键启动
+docker compose up -d
 
-通过 `--mode` 参数指定：
+# 3. 查看日志
+docker compose logs -f backend
+```
+
+服务起来后：
+- Web API: `http://<your-host>:5001`
+- 报告文件: 持久化在 `backend/output/` 目录
+
+## ⚙️ 配置项
+
+### 后端环境变量（`backend/.env`）
+
+| 变量 | 必填 | 默认 | 说明 |
+|------|------|------|------|
+| `LLM_API_KEY` | ✅ | - | LLM 服务 API Key |
+| `LLM_BASE_URL` | ✅ | - | LLM 服务 Base URL（兼容 OpenAI 协议） |
+| `LLM_MODEL` | ❌ | `gpt-4-turbo` | 模型名 |
+| `GITHUB_API_TOKEN` | ❌ | - | GitHub Token（可选，提升速率配额） |
+| `SCHEDULE_TIME` | ❌ | `09:00` | 每日任务执行时间（HH:MM） |
+| `NUM_PROJECTS_TO_SUMMARIZE` | ❌ | `8` | 每日分析的新项目数 |
+| `MAX_PROJECTS_TO_SCRAPE` | ❌ | `25` | 从 Trending 筛选的总数 |
+| `TRENDING_DATE_RANGE` | ❌ | `daily` | 抓取周期：`daily` / `weekly` / `monthly` |
+| `PORT` | ❌ | `5001` | Web 服务端口 |
+| `OUTPUT_DIR` | ❌ | `./output` | 报告输出目录 |
+| `SCRAPER_RETRY_TOTAL` | ❌ | `3` | 抓取失败重试次数 |
+| `SCRAPER_PROJECT_INTERVAL` | ❌ | `1` | 两个项目间的请求间隔（秒） |
+
+完整列表见 `backend/config/settings.py`。
+
+### 前端环境变量（`frontend/.env`）
+
+```env
+VITE_API_BASE_URL=http://localhost:5001
+```
+
+## 🎛 运行模式
+
+```bash
+python app.py --mode <mode> [--host 0.0.0.0] [--port 5001] [--debug]
+```
 
 | 模式 | 说明 |
 |------|------|
-| `full` | 运行完整服务（Web API + 定时任务）[默认] |
-| `web` | 仅运行 Web API 服务（适用于前端开发） |
-| `reporter` | 仅运行定时报告生成任务（适用于后台运行） |
+| `full` | 同时运行 Web API + 定时任务（**默认**） |
+| `web` | 仅 Web API，不跑定时任务（适合前端开发） |
+| `reporter` | 仅定时任务，不开 Web（适合纯后台采集） |
 
-其他常用参数：
+## 📡 API 参考
 
-- `--host`: Web 服务监听地址，默认 `127.0.0.1`
-- `--port`: Web 服务端口，默认 `5001`
-- `--debug`: 启用调试模式
+后端所有 API 都挂在 `/api/` 前缀下，详细列表见 [`backend/router.py`](backend/router.py)。
+
+| 路径 | 说明 |
+|------|------|
+| `GET /api/reports` | 报告列表 |
+| `GET /api/report/<date>` | 指定日期报告内容 |
+| `GET /api/projects/<date>` | 指定日期的项目列表 |
+| `GET /api/project/<name>` | 项目详情 |
+| `GET /api/project/<name>/analysis` | 单项目 AI 深度分析切片 |
+| `GET /api/trends?days=7` | 趋势数据（7 / 30 / 182 / 365 天） |
+| `GET /api/stats` | 统计信息 |
+| `GET /api/language-distribution` | 语言分布 |
+| `GET /api/tech-domains?days=7` | 技术领域分类 |
+| `GET /api/favorites?client_id=xxx` | 列出收藏 |
+| `POST /api/favorites` | 添加收藏 |
+| `DELETE /api/favorites` | 移除收藏 |
+| `GET /api/rate-limit-status` | 当前 IP 限流状态 |
+| `GET /api/download/<date>/<md\|html>` | 下载报告（带 IP 限流） |
+| `GET /health` | 健康检查 |
+
+## 🧪 测试
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+当前测试覆盖：
+- LLM 提示词渲染（`prompts/`）
+- 抓取器 retry 行为（带 mock）
+- 系统路由（健康检查、限流）
+
+## 🗺 路线图
+
+- [ ] 项目详情页面支持深链分享（带 OG meta）
+- [ ] 排行榜支持「时间段 + 领域」组合筛选
+- [ ] 报告支持 PDF 导出
+- [ ] 接入更多 LLM provider（Anthropic / Gemini）
+- [ ] 插件化的技术领域分类（用户可自定义）
 
 ## 🤝 贡献
 
-欢迎任何形式的贡献！如果您有好的想法或发现了 Bug，请随时提出 Issue 或提交 Pull Request。
+欢迎一切形式的贡献：
 
-## 公众号
+1. Fork 这个仓库
+2. 新建 feature 分支：`git checkout -b feature/your-feature`
+3. 提交改动：`git commit -m "feat: your feature"`
+4. 推送到分支：`git push origin feature/your-feature`
+5. 提一个 Pull Request
 
-欢迎关注我的公众号，获取实时技术解析及前沿观察。
+提交前请跑 `pytest` 确保现有测试通过。
 
-<img src="images/wechat.png" width="300" height="300">
+## 📜 许可证
 
-## 📄 许可证
+本项目基于 [MIT License](LICENSE) 开源。
 
-本项目采用 [MIT 许可证](LICENSE)。
+## 📮 联系我们
+
+- 🐛 Bug / 建议：[GitHub Issues](https://github.com/lgy1027/ai-git-trending/issues)
+- 💬 微信群：见下方二维码
+- 🔗 项目主页：[lgy1027/ai-git-trending](https://github.com/lgy1027/ai-git-trending)
+
+<p align="center">
+  <img src="images/wechat.png" alt="WeChat QR" width="220" />
+  <br />
+  <sub>扫码加微信备注「GitTrend」更快通过</sub>
+</p>
+
+---
+
+⭐ 如果这个项目对你有帮助，欢迎 Star 支持一下！

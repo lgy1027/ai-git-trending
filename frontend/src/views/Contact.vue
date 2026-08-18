@@ -64,7 +64,7 @@
                 <!-- hover 显示的二维码 -->
                 <div class="qr-popup">
                   <img
-                    src="/images/wechat.png"
+                    :src="qrSrc"
                     alt="WeChat QR Code"
                     width="240"
                     height="253"
@@ -112,6 +112,11 @@
 
 <script setup lang="ts">
 import ContactNavLink from '@/components/ContactNavLink.vue'
+
+// 用 JS 字符串绑定 src，避免 Vite 的 import-analysis 插件
+// 把 /images/wechat.png 当作静态资源去解析失败；
+// 这里 /images 由 Vite dev proxy 转给 Flask 后端
+const qrSrc = '/images/wechat.png'
 </script>
 
 <style scoped>
