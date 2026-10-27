@@ -194,7 +194,7 @@
         
         <div v-if="featuredReports.length > 0" class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           <div 
-            v-for="(report, index) in featuredReports" 
+            v-for="(report, index) in featuredReports.slice(0, 5)" 
             :key="report.date"
             class="report-card report-card-compact animate-fadeInUp" 
             :style="{ animationDelay: `${index * 0.1}s` }"

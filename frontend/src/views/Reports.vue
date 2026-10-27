@@ -45,23 +45,19 @@
           </svg>
           <input
             v-model="searchQuery"
-            @input="filterReports"
             type="text"
             placeholder="搜索报告..."
             class="terminal-search"
           >
         </div>
 
-        <select
-          v-model="selectedTimeRange"
-          @change="filterReports"
-          class="terminal-select"
-        >
-          <option value="all">全部时间</option>
-          <option value="week">本周</option>
-          <option value="month">本月</option>
-          <option value="quarter">本季度</option>
+        <select v-model="selectedMonth" class="terminal-select" aria-label="选择报告月份">
+          <option v-for="month in availableMonths" :key="month" :value="month">
+            {{ formatMonth(month) }}
+          </option>
         </select>
+
+        <span class="text-sm text-slate-500">{{ visibleReports.length }} 份报告</span>
 
         <button class="terminal-action" @click="refreshAll">
           <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,9 +85,9 @@
       </div>
 
       <!-- 报告列表 -->
-      <div v-else-if="filteredReports.length > 0 || reports.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div v-else-if="visibleReports.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <div
-          v-for="(report, index) in (filteredReports.length > 0 || searchQuery || selectedTimeRange !== 'all' ? filteredReports : reports)"
+          v-for="(report, index) in visibleReports"
           :key="report.date"
           class="report-card p-5"
           :style="{ animationDelay: `${index * 0.1}s` }"
@@ -131,7 +127,7 @@
       </div>
 
       <!-- 空数据状态 -->
-      <div v-else class="terminal-empty">
+      <div v-else-if="reports.length === 0" class="terminal-empty">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
         </svg>
@@ -140,6 +136,11 @@
         <button class="terminal-action primary" @click="fetchReports">
           刷新数据
         </button>
+      </div>
+
+      <div v-else class="terminal-empty">
+        <h3 class="text-lg font-medium text-slate-400 mb-2">没有找到报告</h3>
+        <p class="text-slate-500">试试其他月份或调整搜索内容</p>
       </div>
     </main>
 
@@ -181,13 +182,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { reportApi, type Report } from '../api/reports'
 import { renderMarkdown } from '../utils/markdown-simple'
 import ContactNavLink from '@/components/ContactNavLink.vue'
 
 const reports = ref<Report[]>([])
-const filteredReports = ref<Report[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showModal = ref(false)
@@ -198,7 +198,20 @@ const loadingContent = ref(false)
 const reportError = ref<string | null>(null)
 
 const searchQuery = ref('')
-const selectedTimeRange = ref('all')
+const selectedMonth = ref('')
+const availableMonths = computed(() =>
+  [...new Set(reports.value.map(report => report.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a))
+)
+const visibleReports = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  return reports.value.filter(report => {
+    const matchesMonth = report.date.startsWith(selectedMonth.value)
+    const matchesQuery = !query ||
+      report.date.toLowerCase().includes(query) ||
+      formatDateShort(report.date).toLowerCase().includes(query)
+    return matchesMonth && matchesQuery
+  })
+})
 
 onMounted(() => {
   fetchReports()
@@ -209,8 +222,10 @@ async function fetchReports() {
     loading.value = true
     error.value = null
     const reportsData = await reportApi.getReports()
-    reports.value = reportsData || []
-    filteredReports.value = reports.value
+    reports.value = (reportsData || []).sort((a, b) => b.date.localeCompare(a.date))
+    if (!availableMonths.value.includes(selectedMonth.value)) {
+      selectedMonth.value = availableMonths.value[0] || ''
+    }
   } catch (err: any) {
     error.value = err.message || '获取报告列表失败'
   } finally {
@@ -218,46 +233,14 @@ async function fetchReports() {
   }
 }
 
-function filterReports() {
-  let filtered = [...reports.value]
-
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim()
-    filtered = filtered.filter(report =>
-      report.date.toLowerCase().includes(query) ||
-      formatDateShort(report.date).toLowerCase().includes(query)
-    )
-  }
-
-  if (selectedTimeRange.value !== 'all') {
-    const now = new Date()
-    const cutoffDate = new Date()
-
-    switch (selectedTimeRange.value) {
-      case 'week':
-        cutoffDate.setDate(now.getDate() - 7)
-        break
-      case 'month':
-        cutoffDate.setMonth(now.getMonth() - 1)
-        break
-      case 'quarter':
-        cutoffDate.setMonth(now.getMonth() - 3)
-        break
-    }
-
-    filtered = filtered.filter(report => {
-      const reportDate = new Date(report.date)
-      return reportDate >= cutoffDate
-    })
-  }
-
-  filteredReports.value = filtered
-}
-
 async function refreshAll() {
   searchQuery.value = ''
-  selectedTimeRange.value = 'all'
   await fetchReports()
+}
+
+function formatMonth(month: string): string {
+  const [year, monthNumber] = month.split('-')
+  return `${year}年${Number(monthNumber)}月`
 }
 
 async function loadReportContent(date?: string) {
