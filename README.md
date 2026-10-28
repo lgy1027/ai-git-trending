@@ -120,7 +120,11 @@ npm run dev
 cp backend/.env.example backend/.env
 # 编辑 backend/.env 填 LLM_API_KEY 等
 
-# 2. 一键启动
+# 2. 前端运行时配置（可选；留空时使用 Nginx 同源代理）
+cp .env.example .env
+# 如需单独指定 API 地址，编辑根目录 .env 中的 VITE_API_BASE_URL
+
+# 3. 首次启动时构建并启动
 docker compose up -d
 
 # 3. 查看日志
@@ -130,6 +134,14 @@ docker compose logs -f backend
 服务起来后：
 - Web API: `http://<your-host>:5001`
 - 报告文件: 持久化在 `backend/output/` 目录
+
+修改 `backend/.env` 或根目录 `.env` 中的参数后，重新创建容器即可让新值生效，不需要重新构建镜像：
+
+```bash
+docker compose up -d --no-build --force-recreate
+```
+
+后端环境变量由 Compose 注入；前端的 `VITE_API_BASE_URL` 由 Nginx 容器启动时生成运行时配置。只有修改应用代码或 Dockerfile 时才需要重新构建镜像。
 
 ## ⚙️ 配置项
 

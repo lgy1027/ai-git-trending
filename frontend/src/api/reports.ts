@@ -1,10 +1,11 @@
 import axios, { AxiosError } from 'axios'
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL
+const runtimeApiBaseUrl = window.__APP_CONFIG__?.apiBaseUrl
 
 const API_BASE_URL = import.meta.env.DEV
   ? ''
-  : (configuredApiBaseUrl !== undefined ? configuredApiBaseUrl : 'http://localhost:5001')
+  : (runtimeApiBaseUrl ?? configuredApiBaseUrl ?? '')
 
 const api = axios.create({
   baseURL: API_BASE_URL,
